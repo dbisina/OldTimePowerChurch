@@ -1,0 +1,402 @@
+{
+  "project": {
+    "name": "Old Time Power Church Website",
+    "description": "Modern, mobile-first (but pixel-perfect across all breakpoints) website for Old Time Power Church — revival-focused, warm 'holy' aesthetic with liquid-glass UI, golden light accents, smooth animations and fully accessible interactions. Designed to host sermons (YouTube time-range clips), outlines, worship content, announcements (graphic or text-only), newsletters and a role-based admin dashboard.",
+    "logo": "/mnt/data/b90cb699-91a3-4751-9c26-b412569d2304.png",
+    "primary_goals": [
+      "Communicate revival identity and “Preparing the Way for the Lord” mission in hero",
+      "Publish searchable sermon outlines linked to time-ranged YouTube clips",
+      "Deliver announcements (graphic & non-graphic) + newsletter signups",
+      "Provide admin tools for sermons, announcements, worship/prayer media and mailing list",
+      "Deliver a modern, warm UX with excellent mobile, tablet and desktop support"
+    ]
+  },
+
+  "brand": {
+    "colors": {
+      "primary": ["#b5621b", "#efc64e"],
+      "secondary": "#221672",
+      "accent": "#583922",
+      "neutral_light": "#f8f7fb",
+      "neutral_dark": "#0b0a13"
+    },
+    "typography": {
+      "heading": "Playfair Display, serif",
+      "body": "Inter, system-ui sans-serif",
+      "special": "Decorative hand-script for small sub-headings (optional)"
+    },
+    "visual_direction": {
+      "mood": "Warm revival — golden glow, soft indigo depths, subtle holy ambience",
+      "effects": [
+        "liquid glass panels",
+        "backdrop-blur surfaces",
+        "soft radial glow",
+        "hero parallax depth"
+      ],
+      "logo_usage": "Prominent in header, hero watermark and footer"
+    }
+  },
+
+  "hero": {
+    "type": "carousel",
+    "slides": [
+      {
+        "image": "hero-slide-1 (radial golden glow)",
+        "headline": "Old Time Revival — Preparing the Way for the Lord",
+        "subheadline": "Awake the church. Ignite revival. Encounter His presence.",
+        "cta_primary": { "text": "Join a Service", "anchor": "#services" },
+        "cta_secondary": { "text": "Watch Latest Sermon", "route": "/sermons?featured=true" }
+      },
+      {
+        "image": "hero-slide-2 (prayer/worship blurred photo, logo watermark)",
+        "headline": "Saviour's Exaltation Service — Sundays 8:00 AM",
+        "subheadline": "A time of praise, proclamation and revival",
+        "cta_primary": { "text": "Plan Your Visit", "route": "/contact" }
+      },
+      {
+        "image": "hero-slide-3 (open bible + dove light ray)",
+        "headline": "Preparing the way for the Lord",
+        "subheadline": "Scripture-centred teaching, Spirit empowerment and community renewal",
+        "cta_primary": { "text": "Subscribe for Sermons", "action": "openConnectModal" }
+      }
+    ],
+    "accessibility": {
+      "carousel_controls": true,
+      "pause_on_hover": true,
+      "aria_live": "polite"
+    }
+  },
+
+  "announcement_types": {
+    "graphic": {
+      "description": "Announcement with uploaded graphic (jpg/png) + text content.",
+      "fields": ["title", "content_html", "graphic_url", "published_at", "expires_at", "pinned"]
+    },
+    "non_graphic": {
+      "description": "Announcement with only text content.",
+      "fields": ["title", "content_html", "published_at", "expires_at", "pinned"]
+    }
+  },
+
+  "pages": [
+    {
+      "slug": "/",
+      "title": "Home",
+      "sections": [
+        "Hero carousel",
+        "Next services (cards)",
+        "Featured sermons",
+        "Top announcement (graphic or non-graphic)",
+        "Worship & Prayer highlights",
+        "Newsletter/Subscribe CTA",
+        "Footer with contact + Telegram link"
+      ]
+    },
+    {
+      "slug": "/sermons",
+      "title": "Sermons",
+      "description": "List of sermons grouped by day with search and filters.",
+      "card_fields": ["thumbnail", "title", "preacher", "service_day", "date", "excerpt", "duration", "featured_badge"],
+      "grouping": ["Featured", "Sunday", "Tuesday", "Friday"],
+      "pagination": { "type": "infinite_or_page", "size": 12 }
+    },
+    {
+      "slug": "/sermons/:id",
+      "title": "Sermon details",
+      "features": [
+        "YouTube time-range embed",
+        "Sermon outline viewer + downloadable",
+        "PDF/Doc inline reader",
+        "Scripture list modal",
+        "Attachments download",
+        "Share buttons",
+        "Related sermons"
+      ],
+      "meta": ["title", "preacher", "service_day", "date", "scriptures", "tags", "video_url", "start_sec", "end_sec", "featured"]
+    },
+    {
+      "slug": "/worship",
+      "title": "Worship",
+      "description": "Worship contents — time-range YouTube videos, lyrics, chord charts, attachments."
+    },
+    {
+      "slug": "/prayer",
+      "title": "Prayer",
+      "description": "Prayer recordings, prayer request form, prayer team signup."
+    },
+    {
+      "slug": "/announcements",
+      "title": "Announcements",
+      "features": [
+        "Graphic announcements (image + content)",
+        "Non-graphic announcements (content only)",
+        "Pinned announcement at top",
+        "Filters for active/expired"
+      ]
+    },
+    {
+      "slug": "/about",
+      "title": "About Us",
+      "sections": ["Vision & Mission", "Pastor & Team", "Core Beliefs", "Service Schedule"]
+    },
+    {
+      "slug": "/contact",
+      "title": "Contact Us",
+      "features": [
+        "Google Maps embed",
+        "Address, email, phone",
+        "Service times",
+        "Contact form with spam protection"
+      ]
+    },
+    {
+      "slug": "/admin",
+      "title": "Admin Dashboard",
+      "access": "Admins only",
+      "sections": [
+        "Sermon Manager",
+        "Announcement Manager (graphic + non-graphic)",
+        "Worship & Prayer Manager",
+        "Mailing List Manager",
+        "Analytics",
+        "User/Roles Manager"
+      ]
+    }
+  ],
+
+  "services": {
+    "service_days": [
+      { "id": "sun", "name": "Saviour's Exaltation Service", "day": "Sunday", "time": "08:00 AM" },
+      { "id": "tue", "name": "Scripture Expository Service", "day": "Tuesday", "time": "05:00 PM" },
+      { "id": "fri", "name": "Spirit Empowerment Service", "day": "Friday", "time": "05:00 PM" }
+    ]
+  },
+
+  "content_workflow": {
+    "sermon_create": {
+      "fields": [
+        "title", "preacher", "service_day", "date",
+        "video_url", "start_time_seconds", "end_time_seconds",
+        "excerpt", "outline_rich_text", "outline_doc_url",
+        "scriptures", "tags", "featured"
+      ],
+      "editor": {
+        "type": "tiptap",
+        "features": ["headings", "bold", "italic", "lists", "blockquote", "links", "scripture tagging", "images", "attachments"],
+        "auto_save": true,
+        "version_history": true
+      },
+      "video_handling": {
+        "embed_start_end": true,
+        "thumbnail_auto_generate": true
+      }
+    },
+    "announcement_create": {
+      "types": ["graphic", "non_graphic"],
+      "fields": {
+        "graphic": ["title", "content_html", "graphic_url", "published_at", "expires_at", "pinned"],
+        "non_graphic": ["title", "content_html", "published_at", "expires_at", "pinned"]
+      }
+    },
+    "worship_prayer_create": {
+      "same_as_sermon_create": true,
+      "category": ["worship", "prayer"]
+    }
+  },
+
+  "integrations": {
+    "media_storage": {
+      "provider": "Cloudinary",
+      "use_cases": [
+        "sermon outlines",
+        "announcement graphics",
+        "thumbnails",
+        "responsive images"
+      ]
+    },
+    "video": {
+      "provider": "YouTube",
+      "support": "start_sec & end_sec"
+    },
+    "email": {
+      "provider_suggestion": "SendGrid / Mailgun / Postmark",
+      "features": ["newsletter blasts", "transactional emails", "webhooks"]
+    },
+    "maps": {
+      "provider": "Google Maps",
+      "feature": "click-to-open directions"
+    },
+    "messaging": {
+      "telegram": {
+        "link_location": "Header/Footer + Connect Modal"
+      }
+    }
+  },
+
+  "data_models": {
+    "Sermon": {
+      "id": "uuid",
+      "title": "string",
+      "preacher": "string",
+      "service_day": "enum[sun,tue,fri]",
+      "date": "date",
+      "video_url": "string",
+      "start_sec": "integer",
+      "end_sec": "integer",
+      "excerpt": "text",
+      "outline_doc_url": "string",
+      "outline_rich_text": "html",
+      "scriptures": ["string"],
+      "tags": ["string"],
+      "featured": "boolean",
+      "created_by": "user_id",
+      "created_at": "timestamp"
+    },
+    "Announcement": {
+      "id": "uuid",
+      "title": "string",
+      "type": "enum[graphic,non_graphic]",
+      "content_html": "html",
+      "graphic_url": "string|null",
+      "published_at": "timestamp",
+      "expires_at": "timestamp|null",
+      "pinned": "boolean"
+    },
+    "Subscriber": {
+      "id": "uuid",
+      "name": "string",
+      "email": "string",
+      "source": "string",
+      "tags": ["string"],
+      "subscribed_at": "timestamp"
+    },
+    "User": {
+      "id": "uuid",
+      "name": "string",
+      "email": "string",
+      "role": "enum[admin,editor,viewer]",
+      "password_hash": "string",
+      "last_login": "timestamp"
+    }
+  },
+
+  "api_endpoints_examples": {
+    "public": [
+      { "method": "GET", "path": "/api/sermons" },
+      { "method": "GET", "path": "/api/sermons/:id" },
+      { "method": "GET", "path": "/api/announcements" },
+      { "method": "POST", "path": "/api/subscribe" }
+    ],
+    "admin": [
+      { "method": "POST", "path": "/api/admin/sermons" },
+      { "method": "PUT", "path": "/api/admin/sermons/:id" },
+      { "method": "POST", "path": "/api/admin/announcements" },
+      { "method": "GET", "path": "/api/admin/subscribers" }
+    ]
+  },
+
+  "auth_and_security": {
+    "auth": {
+      "public_routes": ["/", "/sermons", "/about", "/contact", "/announcements"],
+      "admin_routes": ["/admin/**"],
+      "recommended": "JWT + refresh tokens; bcrypt; optional 2FA"
+    },
+    "csrf": true,
+    "rate_limits": "subscribe/contact throttled",
+    "privacy": "minimal subscriber data"
+  },
+
+  "ui_components": {
+    "navbar": {
+      "items": ["Home", "Sermons", "About Us", "Contact", "Announcements"],
+      "right_cta": { "text": "Connect", "action": "openConnectModal" },
+      "sticky": true
+    },
+    "connect_modal": {
+      "fields": ["name", "email", "subscribe_checkbox", "preferred_service_day"],
+      "quick_actions": ["Join Telegram"]
+    },
+    "sermon_cards": {
+      "layout": "glass card with thumbnail and meta",
+      "hover": "soft glow + lift"
+    },
+    "announcement_cards": {
+      "graphic": "image + content",
+      "non_graphic": "content only"
+    },
+    "document_reader": "Cloudinary/Google Docs inline viewer",
+    "light_dark_toggle": true
+  },
+
+  "animations_and_effects": {
+    "global": [
+      "liquid-glass surfaces",
+      "soft radial glows",
+      "smooth 150–300ms transitions",
+      "mouse-follow glows",
+      "hero parallax"
+    ],
+    "performance": "prefers-reduced-motion supported",
+    "mobile": "reduced heavy parallax"
+  },
+
+  "responsive_and_accessibility": {
+    "breakpoints": ["320", "768", "1024", "1440"],
+    "mobile_first": true,
+    "pixel_perfect_all_sizes": true,
+    "touch": "swipeable carousels",
+    "a11y": ["semantic tags", "aria labels", "WCAG AA contrast"],
+    "seo": {
+      "meta": {
+        "title": "Old Time Power Church — Preparing the Way for the Lord",
+        "description": "Revival services, Scripture expository teaching, Spirit empowerment, and searchable sermons."
+      },
+      "open_graph": true,
+      "structured_data": "Organization + Event + Breadcrumb"
+    }
+  },
+
+  "admin_ui_details": {
+    "sermon_editor": {
+      "rich_text": true,
+      "video_clip_fields": ["youtube_url", "start_sec", "end_sec"],
+      "preview_clip_modal": true,
+      "upload_outline": {
+        "drag_drop": true,
+        "cloudinary_signed_upload": true
+      }
+    },
+    "announcement_editor": {
+      "types": ["graphic", "non_graphic"],
+      "fields_graphic": ["title", "content_html", "graphic_url", "published_at", "expires_at", "pinned"],
+      "fields_non_graphic": ["title", "content_html", "published_at", "expires_at", "pinned"]
+    },
+    "mailing_list_manager": {
+      "view": ["name", "email", "subscribed_at", "tags"],
+      "actions": ["export CSV", "add", "remove", "segment"]
+    }
+  },
+
+  "deploy_and_tech_stack_recommendation": {
+    "frontend": "React (Vite) or Next.js + Tailwind + shadcn",
+    "backend": "Node.js + Express or NestJS",
+    "database": "PostgreSQL",
+    "storage": "Cloudinary",
+    "email": "SendGrid/Postmark",
+    "auth": "NextAuth or JWT",
+    "hosting": {
+      "frontend": "Vercel/Netlify",
+      "backend": "Render/Heroku/AWS",
+      "postgres": "Supabase/Neon"
+    }
+  },
+
+  "extra_features_and_recommendations": {
+    "search": "Postgres FTS or ElasticSearch",
+    "analytics": "Privacy-aware tracking",
+    "donations": "Stripe (optional)",
+    "events": "Church event calendar",
+    "backup_policy": "Automated DB + Cloudinary versioning",
+    "monitoring": "Sentry"
+  }
+}
