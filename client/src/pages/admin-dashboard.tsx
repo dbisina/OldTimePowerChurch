@@ -33,6 +33,7 @@ import {
   Eye,
   Download,
   X,
+  Mail,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,6 +55,15 @@ interface Announcement {
   date: string;
   status: "active" | "scheduled" | "archived";
   content?: string;
+  imageUrl?: string;
+}
+
+interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  name: string;
+  joinedDate: string;
+  status: "active" | "unsubscribed";
 }
 
 // Helper function to extract YouTube video ID
@@ -159,7 +169,47 @@ export default function AdminDashboardPage() {
     type: "text" as "text" | "graphic",
     date: "",
     status: "active" as "active" | "scheduled" | "archived",
+    imageUrl: "",
   });
+
+  // State for newsletter subscribers
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([
+    {
+      id: "1",
+      email: "john@example.com",
+      name: "John Doe",
+      joinedDate: "Dec 01, 2024",
+      status: "active",
+    },
+    {
+      id: "2",
+      email: "jane@example.com",
+      name: "Jane Smith",
+      joinedDate: "Nov 28, 2024",
+      status: "active",
+    },
+    {
+      id: "3",
+      email: "michael@example.com",
+      name: "Michael Johnson",
+      joinedDate: "Nov 20, 2024",
+      status: "active",
+    },
+    {
+      id: "4",
+      email: "sarah@example.com",
+      name: "Sarah Williams",
+      joinedDate: "Nov 15, 2024",
+      status: "active",
+    },
+    {
+      id: "5",
+      email: "david@example.com",
+      name: "David Brown",
+      joinedDate: "Nov 10, 2024",
+      status: "unsubscribed",
+    },
+  ]);
 
   const { toast } = useToast();
 
@@ -253,7 +303,7 @@ export default function AdminDashboardPage() {
   // Announcement handlers
   const openAddAnnouncementDialog = () => {
     setEditingAnnouncement(null);
-    setAnnouncementForm({ title: "", content: "", type: "text", date: "", status: "active" });
+    setAnnouncementForm({ title: "", content: "", type: "text", date: "", status: "active", imageUrl: "" });
     setAnnouncementDialogOpen(true);
   };
 
@@ -265,6 +315,7 @@ export default function AdminDashboardPage() {
       type: announcement.type,
       date: announcement.date,
       status: announcement.status,
+      imageUrl: announcement.imageUrl || "",
     });
     setAnnouncementDialogOpen(true);
   };
@@ -286,6 +337,7 @@ export default function AdminDashboardPage() {
                 type: announcementForm.type,
                 date: announcementForm.date,
                 status: announcementForm.status,
+                imageUrl: announcementForm.imageUrl,
               }
             : a
         )
@@ -299,6 +351,7 @@ export default function AdminDashboardPage() {
         type: announcementForm.type,
         date: announcementForm.date,
         status: announcementForm.status,
+        imageUrl: announcementForm.imageUrl,
       };
       setAnnouncements([newAnnouncement, ...announcements]);
       toast({ title: "Success", description: "Announcement created successfully" });
@@ -426,6 +479,14 @@ export default function AdminDashboardPage() {
             >
               <Users className="h-4 w-4" />
               <span>Users</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="subscribers"
+              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
+              data-testid="tab-admin-subscribers"
+            >
+              <Mail className="h-4 w-4" />
+              <span>Newsletter</span>
             </TabsTrigger>
             <TabsTrigger
               value="settings"
@@ -744,6 +805,50 @@ export default function AdminDashboardPage() {
                         data-testid="input-announcement-date"
                       />
                     </div>
+                    {announcementForm.type === "graphic" && (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Upload Image (1:1 ratio)</label>
+                          <div className="border border-dashed border-primary/30 rounded-lg p-4 text-center bg-background/30 hover:bg-background/50 transition-colors">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    if (typeof event.target?.result === "string") {
+                                      setAnnouncementForm({
+                                        ...announcementForm,
+                                        imageUrl: event.target.result,
+                                      });
+                                    }
+                                  };
+                                  reader.readAsDataURL(e.target.files[0]);
+                                }
+                              }}
+                              className="hidden"
+                              id="image-upload"
+                              data-testid="input-announcement-image"
+                            />
+                            <label htmlFor="image-upload" className="cursor-pointer block">
+                              <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                              <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF up to 10MB</p>
+                            </label>
+                          </div>
+                        </div>
+                        {announcementForm.imageUrl && (
+                          <div className="rounded-lg overflow-hidden border border-primary/20">
+                            <img
+                              src={announcementForm.imageUrl}
+                              alt="Announcement preview"
+                              className="w-full aspect-square object-cover"
+                              data-testid="preview-announcement-image"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
                     <div className="flex gap-2 pt-4">
                       <Button
                         onClick={handleSaveAnnouncement}
@@ -825,6 +930,95 @@ export default function AdminDashboardPage() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          {/* Newsletter Subscribers Tab */}
+          <TabsContent value="subscribers" className="mt-0 space-y-4">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Newsletter Subscribers</h2>
+                <p className="text-muted-foreground">People who joined the mailing list</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="border-primary/20" data-testid="button-export-subscribers">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+
+            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle>Subscriber Statistics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="bg-background/50 backdrop-blur-sm border-primary/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Subscribers</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-[#efc64e]">{subscribers.length}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-background/50 backdrop-blur-sm border-primary/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-500">
+                        {subscribers.filter((s) => s.status === "active").length}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-background/50 backdrop-blur-sm border-primary/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Unsubscribed</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-red-500">
+                        {subscribers.filter((s) => s.status === "unsubscribed").length}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-background/50 backdrop-blur-sm border-primary/20 overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-primary/10">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Joined Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscribers.map((subscriber) => (
+                      <TableRow key={subscriber.id} className="border-primary/10">
+                        <TableCell className="font-medium">{subscriber.name}</TableCell>
+                        <TableCell>{subscriber.email}</TableCell>
+                        <TableCell>{subscriber.joinedDate}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              subscriber.status === "active"
+                                ? "bg-green-500/20 text-green-700 dark:text-green-400"
+                                : "bg-red-500/20 text-red-700 dark:text-red-400"
+                            }`}
+                          >
+                            {subscriber.status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           </TabsContent>
 
           {/* Users Tab */}
