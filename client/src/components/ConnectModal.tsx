@@ -151,8 +151,8 @@ export function ConnectModal({ open, onOpenChange }: ConnectModalProps) {
               variant="outline"
               className="w-full"
               onClick={() => {
-                // todo: remove mock functionality
-                toast({ title: "Opening Telegram...", description: "Join our community channel" });
+                window.open("https://t.me/+OTPC_Group", "_blank");
+                toast({ title: "Opening Telegram...", description: "Join our community group" });
               }}
               data-testid="button-connect-telegram"
             >

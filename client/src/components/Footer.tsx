@@ -1,7 +1,9 @@
-import { MapPin, Mail, Phone, Clock } from "lucide-react";
-import { SiTelegram } from "react-icons/si";
+import { MapPin, Clock, ExternalLink } from "lucide-react";
+import { SiFacebook, SiTelegram } from "react-icons/si";
 import { Link } from "wouter";
-import logoImage from "@assets/OTPC-removebg-preview_1764645088059.png";
+
+const CHURCH_FB = "https://www.facebook.com/OLDTIMEPOWERCHURCH/";
+const CHURCH_TELEGRAM = "https://t.me/+OTPC_Group";
 
 export function Footer() {
   return (
@@ -10,7 +12,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <div className="lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <img src={logoImage} alt="Old Time Power Church" className="h-14 w-14 object-contain" />
+              <img src="/images/OTPC-removebg-preview.png" alt="Old Time Power Church" className="h-14 w-14 object-contain" />
               <div>
                 <h3 className="font-serif font-bold text-lg">Old Time Power</h3>
                 <p className="text-white/70 text-sm">Church</p>
@@ -19,14 +21,28 @@ export function Footer() {
             <p className="text-white/70 text-sm leading-relaxed mb-4">
               Preparing the Way for the Lord through revival services, Scripture teaching, and Spirit empowerment.
             </p>
-            <a
-              href="#"
-              className="inline-flex items-center gap-2 text-[#efc64e] hover:underline"
-              data-testid="link-footer-telegram"
-            >
-              <SiTelegram className="h-5 w-5" />
-              <span>Join Our Telegram</span>
-            </a>
+            <div className="flex gap-3">
+              <a
+                href={CHURCH_FB}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-[#efc64e] hover:underline"
+                data-testid="link-footer-facebook"
+              >
+                <SiFacebook className="h-5 w-5" />
+                <span>Facebook</span>
+              </a>
+              <a
+                href={CHURCH_TELEGRAM}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-[#0088cc] hover:underline"
+                data-testid="link-footer-telegram"
+              >
+                <SiTelegram className="h-5 w-5" />
+                <span>Telegram</span>
+              </a>
+            </div>
           </div>
 
           <div>
@@ -76,23 +92,15 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-serif font-semibold text-lg mb-4">Contact Us</h4>
+            <h4 className="font-serif font-semibold text-lg mb-4">Location</h4>
             <ul className="space-y-3">
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-1 text-[#efc64e]" />
-                <span className="text-white/70 text-sm">123 Church Street, City, Country</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-[#efc64e]" />
-                <a href="mailto:info@otpchurch.org" className="text-white/70 hover:text-[#efc64e] text-sm transition-colors">
-                  info@otpchurch.org
-                </a>
-              </li>
-              <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-[#efc64e]" />
-                <a href="tel:+1234567890" className="text-white/70 hover:text-[#efc64e] text-sm transition-colors">
-                  +1 (234) 567-890
-                </a>
+                <span className="text-white/70 text-sm">
+                  Old Time Power Church<br />
+                  Warri, Delta State<br />
+                  Nigeria
+                </span>
               </li>
             </ul>
           </div>

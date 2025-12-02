@@ -1,66 +1,94 @@
-import { useState } from "react";
-import { Filter, Pin, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Image as ImageIcon, FileText, Pin, Calendar, X, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
+import { useToast } from "@/hooks/use-toast";
 
-// todo: remove mock functionality
-const mockAnnouncements = [
-  {
-    id: "1",
-    title: "Christmas Carol Service",
-    content: "Join us for our annual Christmas Carol Service on December 24th at 6:00 PM. A special time of worship, fellowship, and celebrating the birth of our Savior. There will be special music presentations, children's choir, and a candlelight service to conclude the evening.",
-    type: "graphic" as const,
-    graphicUrl: "https://images.unsplash.com/photo-1512389142860-9c449e58a814?w=800&q=80",
-    publishedAt: "Nov 20, 2024",
-    pinned: true,
-  },
-  {
-    id: "2",
-    title: "Youth Bible Study - New Series",
-    content: "Our youth ministry is starting a new series on 'Faith in Action'. Every Saturday at 4:00 PM. All young people ages 13-25 are welcome! Snacks and refreshments will be provided.",
-    type: "non_graphic" as const,
-    publishedAt: "Nov 18, 2024",
-    pinned: false,
-  },
-  {
-    id: "3",
-    title: "Church Building Fund Update",
-    content: "We are excited to announce that we have reached 75% of our building fund goal! Thank you for your generous contributions. The new fellowship hall construction is scheduled to begin in January 2025.",
-    type: "non_graphic" as const,
-    publishedAt: "Nov 15, 2024",
-    pinned: false,
-  },
-  {
-    id: "4",
-    title: "Annual Church Retreat",
-    content: "Mark your calendars for our annual church retreat happening February 14-16, 2025. This year's theme is 'Deeper Roots, Higher Branches'. Registration opens December 1st.",
-    type: "graphic" as const,
-    graphicUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-    publishedAt: "Nov 12, 2024",
-    pinned: false,
-  },
-  {
-    id: "5",
-    title: "Prayer Chain Update",
-    content: "Our prayer chain ministry has seen tremendous growth! If you would like to join or have prayer requests, please contact Sister Mary at the church office. Together, we lift each other up in prayer.",
-    type: "non_graphic" as const,
-    publishedAt: "Nov 10, 2024",
-    pinned: false,
-  },
-];
+interface Announcement {
+  id: string;
+  title: string;
+  contentHtml?: string;
+  type: "graphic" | "non_graphic";
+  graphicUrl?: string;
+  publishedAt: string;
+  pinned: boolean;
+}
 
 export default function AnnouncementsPage() {
-  const [filter, setFilter] = useState<"all" | "pinned" | "graphic">("all");
+  const [filter, setFilter] = useState<"all" | "pinned" | "graphic" | "text">("all");
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const filteredAnnouncements = mockAnnouncements.filter((announcement) => {
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await fetch("/api/announcements");
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(data.map((a: any) => ({
+          ...a,
+          content: a.contentHtml,
+          publishedAt: new Date(a.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        })));
+      }
+    } catch (error) {
+      console.error("Failed to fetch announcements:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAnnouncements = announcements.filter((announcement) => {
     if (filter === "pinned") return announcement.pinned;
     if (filter === "graphic") return announcement.type === "graphic";
+    if (filter === "text") return announcement.type === "non_graphic";
     return true;
   });
 
   const pinnedAnnouncements = filteredAnnouncements.filter((a) => a.pinned);
   const regularAnnouncements = filteredAnnouncements.filter((a) => !a.pinned);
+
+  // Count announcements by type
+  const graphicCount = announcements.filter(a => a.type === "graphic").length;
+  const textCount = announcements.filter(a => a.type === "non_graphic").length;
+  const pinnedCount = announcements.filter(a => a.pinned).length;
+
+  const handleAnnouncementClick = (announcement: Announcement) => {
+    setSelectedAnnouncement(announcement);
+    setDialogOpen(true);
+  };
+
+  const handleShare = async () => {
+    if (!selectedAnnouncement) return;
+    const shareUrl = `${window.location.origin}/announcements#${selectedAnnouncement.id}`;
+    
+    if (navigator.share) {
+      await navigator.share({
+        title: selectedAnnouncement.title,
+        text: selectedAnnouncement.contentHtml || "",
+        url: shareUrl,
+      });
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Link copied!",
+        description: "Announcement link copied to clipboard",
+      });
+    }
+  };
 
   return (
     <main className="min-h-screen py-8 md:py-12">
@@ -72,13 +100,14 @@ export default function AnnouncementsPage() {
           </p>
         </div>
 
+        {/* Filter buttons with counts */}
         <div className="flex gap-2 mb-8 flex-wrap">
           <Button
             variant={filter === "all" ? "default" : "outline"}
             onClick={() => setFilter("all")}
             data-testid="button-filter-all"
           >
-            All
+            All ({announcements.length})
           </Button>
           <Button
             variant={filter === "pinned" ? "default" : "outline"}
@@ -86,15 +115,23 @@ export default function AnnouncementsPage() {
             data-testid="button-filter-pinned"
           >
             <Pin className="h-4 w-4 mr-2" />
-            Pinned
+            Pinned ({pinnedCount})
           </Button>
           <Button
             variant={filter === "graphic" ? "default" : "outline"}
             onClick={() => setFilter("graphic")}
             data-testid="button-filter-graphic"
           >
-            <Filter className="h-4 w-4 mr-2" />
-            With Images
+            <ImageIcon className="h-4 w-4 mr-2" />
+            With Graphics ({graphicCount})
+          </Button>
+          <Button
+            variant={filter === "text" ? "default" : "outline"}
+            onClick={() => setFilter("text")}
+            data-testid="button-filter-text"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Text Only ({textCount})
           </Button>
         </div>
 
@@ -106,7 +143,11 @@ export default function AnnouncementsPage() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {pinnedAnnouncements.map((announcement) => (
-                <AnnouncementCard key={announcement.id} {...announcement} />
+                <AnnouncementCard 
+                  key={announcement.id} 
+                  {...announcement} 
+                  onClick={() => handleAnnouncementClick(announcement)}
+                />
               ))}
             </div>
           </div>
@@ -120,7 +161,11 @@ export default function AnnouncementsPage() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {regularAnnouncements.map((announcement) => (
-                <AnnouncementCard key={announcement.id} {...announcement} />
+                <AnnouncementCard 
+                  key={announcement.id} 
+                  {...announcement} 
+                  onClick={() => handleAnnouncementClick(announcement)}
+                />
               ))}
             </div>
           </div>
@@ -132,6 +177,90 @@ export default function AnnouncementsPage() {
           </div>
         )}
       </div>
+
+      {/* Announcement Detail Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          {selectedAnnouncement && (
+            <>
+              {/* Graphic Image - Full size, not cropped */}
+              {selectedAnnouncement.type === "graphic" && selectedAnnouncement.graphicUrl && (
+                <div className="w-full overflow-hidden relative bg-black/10">
+                  <img
+                    src={selectedAnnouncement.graphicUrl}
+                    alt={selectedAnnouncement.title}
+                    className="w-full h-auto max-h-[60vh] object-contain mx-auto"
+                  />
+                  {/* Badges overlay */}
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    {selectedAnnouncement.pinned && (
+                      <Badge className="bg-[#efc64e] text-[#0b0a13] border-0 shadow-lg">
+                        <Pin className="h-3 w-3 mr-1" />
+                        Pinned
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="bg-black/60 text-white border-0 backdrop-blur-sm">
+                      <ImageIcon className="h-3 w-3 mr-1" />
+                      Graphic
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="p-6 flex-1 overflow-y-auto">
+                <DialogHeader className="mb-4">
+                  {/* Non-graphic badges */}
+                  {selectedAnnouncement.type === "non_graphic" && (
+                    <div className="flex items-center gap-2 mb-3">
+                      {selectedAnnouncement.pinned && (
+                        <Badge className="bg-[#efc64e]/20 text-[#b5621b] border-0">
+                          <Pin className="h-3 w-3 mr-1" />
+                          Pinned
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
+                        <FileText className="h-3 w-3 mr-1" />
+                        Text Announcement
+                      </Badge>
+                    </div>
+                  )}
+                  <DialogTitle className="font-serif text-2xl md:text-3xl leading-tight">
+                    {selectedAnnouncement.title}
+                  </DialogTitle>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>{selectedAnnouncement.publishedAt}</span>
+                  </div>
+                </DialogHeader>
+
+                {/* Announcement Content */}
+                {selectedAnnouncement.contentHtml && (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <p className="text-base leading-relaxed whitespace-pre-wrap">
+                      {selectedAnnouncement.contentHtml}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t p-4 flex items-center justify-between bg-muted/30">
+                <p className="text-xs text-muted-foreground">Old Time Power Church</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleShare}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                  <Button size="sm" onClick={() => setDialogOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

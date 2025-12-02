@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { MapPin, Mail, Phone, Clock, Send } from "lucide-react";
-import { SiTelegram } from "react-icons/si";
+import { MapPin, Clock, Send, ExternalLink } from "lucide-react";
+import { SiTelegram, SiFacebook } from "react-icons/si";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
+// Church coordinates: 5.563793905003396, 5.794660028834878
+const CHURCH_LAT = 5.563793905003396;
+const CHURCH_LNG = 5.794660028834878;
+const CHURCH_FB = "https://www.facebook.com/OLDTIMEPOWERCHURCH/";
+
 export default function ContactPage() {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
     subject: "",
     message: "",
   });
@@ -22,7 +26,7 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // todo: remove mock functionality
+    // For now, just show success - can integrate with backend later
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     toast({
@@ -30,7 +34,7 @@ export default function ContactPage() {
       description: "Thank you for reaching out. We'll get back to you soon.",
     });
 
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    setFormData({ name: "", subject: "", message: "" });
     setIsSubmitting(false);
   };
 
@@ -52,30 +56,16 @@ export default function ContactPage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        placeholder="Your name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                        data-testid="input-contact-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                        data-testid="input-contact-email"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="Your name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      data-testid="input-contact-name"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="subject">Subject</Label>
@@ -123,7 +113,7 @@ export default function ContactPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="font-serif">Contact Information</CardTitle>
+                <CardTitle className="font-serif">Connect With Us</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -131,47 +121,46 @@ export default function ContactPage() {
                     <MapPin className="h-5 w-5 text-[#b5621b]" />
                   </div>
                   <div>
-                    <h4 className="font-medium mb-1">Address</h4>
+                    <h4 className="font-medium mb-1">Location</h4>
                     <p className="text-muted-foreground text-sm">
-                      123 Church Street<br />
-                      City, State 12345<br />
-                      Country
+                      Old Time Power Church<br />
+                      Warri, Delta State, Nigeria
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#efc64e]/20 flex items-center justify-center flex-shrink-0">
-                    <Mail className="h-5 w-5 text-[#b5621b]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#1877f2]/20 flex items-center justify-center flex-shrink-0">
+                    <SiFacebook className="h-5 w-5 text-[#1877f2]" />
                   </div>
                   <div>
-                    <h4 className="font-medium mb-1">Email</h4>
-                    <a href="mailto:info@otpchurch.org" className="text-primary hover:underline text-sm">
-                      info@otpchurch.org
+                    <h4 className="font-medium mb-1">Facebook</h4>
+                    <a 
+                      href={CHURCH_FB} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm flex items-center gap-1"
+                    >
+                      Follow us on Facebook
+                      <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#efc64e]/20 flex items-center justify-center flex-shrink-0">
-                    <Phone className="h-5 w-5 text-[#b5621b]" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">Phone</h4>
-                    <a href="tel:+1234567890" className="text-primary hover:underline text-sm">
-                      +1 (234) 567-890
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#efc64e]/20 flex items-center justify-center flex-shrink-0">
-                    <SiTelegram className="h-5 w-5 text-[#b5621b]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#0088cc]/20 flex items-center justify-center flex-shrink-0">
+                    <SiTelegram className="h-5 w-5 text-[#0088cc]" />
                   </div>
                   <div>
                     <h4 className="font-medium mb-1">Telegram</h4>
-                    <a href="#" className="text-primary hover:underline text-sm">
-                      Join our Telegram channel
+                    <a
+                      href="https://t.me/+OTPC_Group"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#0088cc] hover:underline text-sm flex items-center gap-1"
+                    >
+                      Join Our Group
+                      <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>
@@ -215,7 +204,7 @@ export default function ContactPage() {
             <Card className="overflow-hidden">
               <div className="aspect-video bg-muted">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.952912260219!2d3.375295414770757!3d6.5276316452784695!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMzEnMzkuNSJOIDPCsDIyJzM5LjAiRQ!5e0!3m2!1sen!2sus!4v1629876543210!5m2!1sen!2sus"
+                  src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.5!2d${CHURCH_LNG}!3d${CHURCH_LAT}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMzMnNDkuNyJOIDXCsDQ3JzQwLjgiRQ!5e0!3m2!1sen!2sng!4v1700000000000!5m2!1sen!2sng`}
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -228,7 +217,7 @@ export default function ContactPage() {
               <CardContent className="p-4">
                 <Button variant="outline" className="w-full" asChild>
                   <a
-                    href="https://maps.google.com"
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${CHURCH_LAT},${CHURCH_LNG}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     data-testid="link-get-directions"

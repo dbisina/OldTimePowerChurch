@@ -12,6 +12,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -30,10 +40,19 @@ import {
   Edit2,
   Trash2,
   BarChart3,
-  Eye,
-  Download,
-  X,
   Mail,
+  Calendar,
+  Video,
+  Image as ImageIcon,
+  Star,
+  Pin,
+  Clock,
+  Download,
+  CheckCircle2,
+  TrendingUp,
+  FileText,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,38 +60,53 @@ interface Sermon {
   id: string;
   title: string;
   preacher: string;
+  serviceDay: string;
   date: string;
-  youtubeUrl: string;
-  startTime: string;
-  endTime: string;
-  views: number;
+  videoUrl: string;
+  startSec: number;
+  endSec: number;
+  excerpt?: string;
+  outline?: string;
+  featured: boolean;
+  scriptures?: string[];
+  tags?: string[];
 }
 
 interface Announcement {
   id: string;
   title: string;
-  type: "text" | "graphic";
-  date: string;
-  status: "active" | "scheduled" | "archived";
-  content?: string;
-  imageUrl?: string;
+  type: "graphic" | "non_graphic";
+  contentHtml?: string;
+  graphicUrl?: string;
+  publishedAt: string;
+  expiresAt?: string;
+  pinned: boolean;
 }
 
-interface NewsletterSubscriber {
+interface Subscriber {
   id: string;
   email: string;
   name: string;
-  joinedDate: string;
+  subscribedAt: string;
   status: "active" | "unsubscribed";
+  preferredServiceDay?: string;
 }
 
-// Helper function to extract YouTube video ID
+interface Stats {
+  totalSermons: number;
+  featuredSermons: number;
+  totalAnnouncements: number;
+  activeAnnouncements: number;
+  totalSubscribers: number;
+  activeSubscribers: number;
+}
+
+// Helper to extract YouTube video ID
 function extractYouTubeVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
     /^([a-zA-Z0-9_-]{11})$/,
   ];
-
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
@@ -80,71 +114,30 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
+// Helper to format seconds to MM:SS
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Helper to parse time string to seconds
+function parseTimeToSeconds(timeStr: string): number {
+  const parts = timeStr.split(':').map(p => parseInt(p) || 0);
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return 0;
+}
+
 export default function AdminDashboardPage() {
   const [, setLocation] = useLocation();
-  const [adminEmail, setAdminEmail] = useState("");
+  const [adminUser, setAdminUser] = useState<{ email: string; username: string; role: string } | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   
   // State for sermons
-  const [sermons, setSermons] = useState<Sermon[]>([
-    {
-      id: "1",
-      title: "The Power of Persistent Prayer",
-      preacher: "Pastor John",
-      date: "Nov 24, 2024",
-      youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      startTime: "0:15",
-      endTime: "45:30",
-      views: 1240,
-    },
-    {
-      id: "2",
-      title: "Walking in the Spirit",
-      preacher: "Pastor John",
-      date: "Nov 22, 2024",
-      youtubeUrl: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-      startTime: "2:30",
-      endTime: "38:15",
-      views: 892,
-    },
-    {
-      id: "3",
-      title: "Understanding the Book of Romans",
-      preacher: "Elder James",
-      date: "Nov 19, 2024",
-      youtubeUrl: "https://www.youtube.com/watch?v=9bZkp7q19f0",
-      startTime: "0:00",
-      endTime: "52:00",
-      views: 756,
-    },
-  ]);
-
-  // State for announcements
-  const [announcements, setAnnouncements] = useState<Announcement[]>([
-    {
-      id: "1",
-      title: "Holiday Service Schedule",
-      type: "text",
-      date: "Nov 20, 2024",
-      status: "active",
-      content: "Join us for our holiday services",
-    },
-    {
-      id: "2",
-      title: "Prayer Meeting Announcement",
-      type: "graphic",
-      date: "Nov 18, 2024",
-      status: "active",
-      content: "Special prayer meeting this week",
-    },
-    {
-      id: "3",
-      title: "Thanksgiving Celebration",
-      type: "graphic",
-      date: "Nov 15, 2024",
-      status: "archived",
-      content: "Thanksgiving celebration event",
-    },
-  ]);
+  const [sermons, setSermons] = useState<Sermon[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
 
   // Dialog states
   const [sermonDialogOpen, setSermonDialogOpen] = useState(false);
@@ -156,78 +149,109 @@ export default function AdminDashboardPage() {
   const [sermonForm, setSermonForm] = useState({
     title: "",
     preacher: "",
+    serviceDay: "sun",
     date: "",
-    youtubeUrl: "",
-    startTime: "",
+    videoUrl: "",
+    startTime: "0:00",
     endTime: "",
-    views: "0",
+    excerpt: "",
+    outline: "",
+    featured: false,
+    scriptures: "",
+    tags: "",
   });
+
+  const [outlineUploading, setOutlineUploading] = useState(false);
+  const [graphicUploading, setGraphicUploading] = useState(false);
 
   const [announcementForm, setAnnouncementForm] = useState({
     title: "",
-    content: "",
-    type: "text" as "text" | "graphic",
-    date: "",
-    status: "active" as "active" | "scheduled" | "archived",
-    imageUrl: "",
+    contentHtml: "",
+    type: "non_graphic" as "graphic" | "non_graphic",
+    publishedAt: new Date().toISOString().split('T')[0],
+    expiresAt: "",
+    pinned: false,
+    graphicUrl: "",
   });
-
-  // State for newsletter subscribers
-  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([
-    {
-      id: "1",
-      email: "john@example.com",
-      name: "John Doe",
-      joinedDate: "Dec 01, 2024",
-      status: "active",
-    },
-    {
-      id: "2",
-      email: "jane@example.com",
-      name: "Jane Smith",
-      joinedDate: "Nov 28, 2024",
-      status: "active",
-    },
-    {
-      id: "3",
-      email: "michael@example.com",
-      name: "Michael Johnson",
-      joinedDate: "Nov 20, 2024",
-      status: "active",
-    },
-    {
-      id: "4",
-      email: "sarah@example.com",
-      name: "Sarah Williams",
-      joinedDate: "Nov 15, 2024",
-      status: "active",
-    },
-    {
-      id: "5",
-      email: "david@example.com",
-      name: "David Brown",
-      joinedDate: "Nov 10, 2024",
-      status: "unsubscribed",
-    },
-  ]);
 
   const { toast } = useToast();
 
+  // Helper to get auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("adminToken");
+    return {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    };
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
-    const email = localStorage.getItem("adminEmail");
+    const userStr = localStorage.getItem("adminUser");
 
     if (!token) {
       setLocation("/admin/login");
       return;
     }
 
-    setAdminEmail(email || "");
+    // Verify token is still valid
+    fetch("/api/auth/verify", {
+      headers: { "Authorization": `Bearer ${token}` },
+    }).then(res => {
+      if (!res.ok) {
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminUser");
+        setLocation("/admin/login");
+        return;
+      }
+    }).catch(() => {
+      // Token verification failed, but continue if we have user data
+    });
+
+    if (userStr) {
+      try {
+        setAdminUser(JSON.parse(userStr));
+      } catch {
+        setAdminUser(null);
+      }
+    }
+    fetchData();
   }, [setLocation]);
+
+  const fetchData = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const [sermonsRes, announcementsRes, subscribersRes, statsRes] = await Promise.all([
+        fetch("/api/sermons"),
+        fetch("/api/announcements"),
+        fetch("/api/admin/subscribers", { headers }),
+        fetch("/api/admin/stats", { headers }),
+      ]);
+
+      if (sermonsRes.ok) {
+        const data = await sermonsRes.json();
+        setSermons(data);
+      }
+      if (announcementsRes.ok) {
+        const data = await announcementsRes.json();
+        setAnnouncements(data);
+      }
+      if (subscribersRes.ok) {
+        const data = await subscribersRes.json();
+        setSubscribers(data);
+      }
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        setStats(data);
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
+    localStorage.removeItem("adminUser");
     toast({ title: "Logged out successfully" });
     setLocation("/");
   };
@@ -235,8 +259,168 @@ export default function AdminDashboardPage() {
   // Sermon handlers
   const openAddSermonDialog = () => {
     setEditingSermon(null);
-    setSermonForm({ title: "", preacher: "", date: "", youtubeUrl: "", startTime: "", endTime: "", views: "0" });
+    setSermonForm({
+      title: "",
+      preacher: "",
+      serviceDay: "sun",
+      date: "",
+      videoUrl: "",
+      startTime: "0:00",
+      endTime: "",
+      excerpt: "",
+      outline: "",
+      featured: false,
+      scriptures: "",
+      tags: "",
+    });
     setSermonDialogOpen(true);
+  };
+
+  // Auto-fetch YouTube metadata
+  const fetchYouTubeMetadata = async (url: string) => {
+    if (!url) return;
+    
+    try {
+      const response = await fetch(`/api/youtube/metadata?url=${encodeURIComponent(url)}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Only auto-fill if fields are empty
+        setSermonForm(prev => ({
+          ...prev,
+          title: prev.title || data.title || "",
+          preacher: prev.preacher || data.author || "",
+        }));
+        toast({ title: "Video info loaded", description: data.title });
+      }
+    } catch (error) {
+      // Silently fail - user can still enter manually
+    }
+  };
+
+  // Handle document upload for sermon outline
+  const handleOutlineDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const isValidType = allowedTypes.includes(file.type) || 
+                        file.name.toLowerCase().endsWith('.docx') || 
+                        file.name.toLowerCase().endsWith('.pdf');
+    
+    if (!isValidType) {
+      toast({ 
+        title: "Invalid file type", 
+        description: "Please upload a PDF or DOCX file", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    setOutlineUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+      
+      const response = await fetch('/api/extract-document', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to extract document');
+      }
+      
+      const data = await response.json();
+      
+      setSermonForm(prev => ({
+        ...prev,
+        outline: data.text,
+      }));
+      
+      toast({ 
+        title: "Document processed", 
+        description: `Extracted text from ${data.filename}` 
+      });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to process document", 
+        variant: "destructive" 
+      });
+    } finally {
+      setOutlineUploading(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
+
+  // Handle image upload for announcement graphic
+  const handleGraphicImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ 
+        title: "Invalid file type", 
+        description: "Please upload a JPEG, PNG, GIF, or WebP image", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ 
+        title: "File too large", 
+        description: "Please upload an image smaller than 5MB", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    setGraphicUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload image');
+      }
+      
+      const data = await response.json();
+      
+      setAnnouncementForm(prev => ({
+        ...prev,
+        graphicUrl: data.url,
+      }));
+      
+      toast({ 
+        title: "Image uploaded", 
+        description: `Successfully uploaded ${data.filename}` 
+      });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to upload image", 
+        variant: "destructive" 
+      });
+    } finally {
+      setGraphicUploading(false);
+      // Reset file input
+      e.target.value = '';
+    }
   };
 
   const openEditSermonDialog = (sermon: Sermon) => {
@@ -244,66 +428,92 @@ export default function AdminDashboardPage() {
     setSermonForm({
       title: sermon.title,
       preacher: sermon.preacher,
-      date: sermon.date,
-      youtubeUrl: sermon.youtubeUrl,
-      startTime: sermon.startTime,
-      endTime: sermon.endTime,
-      views: sermon.views.toString(),
+      serviceDay: sermon.serviceDay,
+      date: new Date(sermon.date).toISOString().split('T')[0],
+      videoUrl: sermon.videoUrl,
+      startTime: formatTime(sermon.startSec),
+      endTime: formatTime(sermon.endSec || 0),
+      excerpt: sermon.excerpt || "",
+      outline: sermon.outline || "",
+      featured: sermon.featured,
+      scriptures: sermon.scriptures?.join(", ") || "",
+      tags: sermon.tags?.join(", ") || "",
     });
     setSermonDialogOpen(true);
   };
 
-  const handleSaveSermon = () => {
-    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date || !sermonForm.youtubeUrl || !sermonForm.startTime || !sermonForm.endTime) {
-      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+  const handleSaveSermon = async () => {
+    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date || !sermonForm.videoUrl) {
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
 
-    if (editingSermon) {
-      setSermons(
-        sermons.map((s) =>
-          s.id === editingSermon.id
-            ? {
-                ...s,
-                title: sermonForm.title,
-                preacher: sermonForm.preacher,
-                date: sermonForm.date,
-                youtubeUrl: sermonForm.youtubeUrl,
-                startTime: sermonForm.startTime,
-                endTime: sermonForm.endTime,
-                views: parseInt(sermonForm.views) || s.views,
-              }
-            : s
-        )
-      );
-      toast({ title: "Success", description: "Sermon updated successfully" });
-    } else {
-      const newSermon: Sermon = {
-        id: Date.now().toString(),
-        title: sermonForm.title,
-        preacher: sermonForm.preacher,
-        date: sermonForm.date,
-        youtubeUrl: sermonForm.youtubeUrl,
-        startTime: sermonForm.startTime,
-        endTime: sermonForm.endTime,
-        views: parseInt(sermonForm.views) || 0,
-      };
-      setSermons([newSermon, ...sermons]);
-      toast({ title: "Success", description: "Sermon added successfully" });
-    }
+    const payload = {
+      title: sermonForm.title,
+      preacher: sermonForm.preacher,
+      serviceDay: sermonForm.serviceDay,
+      date: new Date(sermonForm.date).toISOString(),
+      videoUrl: sermonForm.videoUrl,
+      startSec: parseTimeToSeconds(sermonForm.startTime),
+      endSec: sermonForm.endTime ? parseTimeToSeconds(sermonForm.endTime) : null,
+      excerpt: sermonForm.excerpt || null,
+      outline: sermonForm.outline || null,
+      featured: sermonForm.featured,
+      scriptures: sermonForm.scriptures ? sermonForm.scriptures.split(',').map(s => s.trim()) : [],
+      tags: sermonForm.tags ? sermonForm.tags.split(',').map(s => s.trim()) : [],
+      outlineRichText: null,
+      outlineDocUrl: null,
+      createdBy: null,
+    };
 
-    setSermonDialogOpen(false);
+    try {
+      const url = editingSermon ? `/api/admin/sermons/${editingSermon.id}` : "/api/admin/sermons";
+      const method = editingSermon ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast({ title: "Success", description: `Sermon ${editingSermon ? "updated" : "created"} successfully` });
+        setSermonDialogOpen(false);
+        fetchData();
+      } else {
+        throw new Error("Failed to save sermon");
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save sermon", variant: "destructive" });
+    }
   };
 
-  const handleDeleteSermon = (id: string) => {
-    setSermons(sermons.filter((s) => s.id !== id));
-    toast({ title: "Sermon deleted successfully" });
+  const handleDeleteSermon = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this sermon?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/sermons/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        toast({ title: "Sermon deleted successfully" });
+        fetchData();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete sermon", variant: "destructive" });
+    }
   };
 
   // Announcement handlers
   const openAddAnnouncementDialog = () => {
     setEditingAnnouncement(null);
-    setAnnouncementForm({ title: "", content: "", type: "text", date: "", status: "active", imageUrl: "" });
+    setAnnouncementForm({
+      title: "",
+      contentHtml: "",
+      type: "non_graphic",
+      publishedAt: new Date().toISOString().split('T')[0],
+      expiresAt: "",
+      pinned: false,
+      graphicUrl: "",
+    });
     setAnnouncementDialogOpen(true);
   };
 
@@ -311,62 +521,88 @@ export default function AdminDashboardPage() {
     setEditingAnnouncement(announcement);
     setAnnouncementForm({
       title: announcement.title,
-      content: announcement.content || "",
+      contentHtml: announcement.contentHtml || "",
       type: announcement.type,
-      date: announcement.date,
-      status: announcement.status,
-      imageUrl: announcement.imageUrl || "",
+      publishedAt: new Date(announcement.publishedAt).toISOString().split('T')[0],
+      expiresAt: announcement.expiresAt ? new Date(announcement.expiresAt).toISOString().split('T')[0] : "",
+      pinned: announcement.pinned,
+      graphicUrl: announcement.graphicUrl || "",
     });
     setAnnouncementDialogOpen(true);
   };
 
-  const handleSaveAnnouncement = () => {
-    if (!announcementForm.title || !announcementForm.date) {
+  const handleSaveAnnouncement = async () => {
+    if (!announcementForm.title || !announcementForm.publishedAt) {
       toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
 
-    if (editingAnnouncement) {
-      setAnnouncements(
-        announcements.map((a) =>
-          a.id === editingAnnouncement.id
-            ? {
-                ...a,
-                title: announcementForm.title,
-                content: announcementForm.content,
-                type: announcementForm.type,
-                date: announcementForm.date,
-                status: announcementForm.status,
-                imageUrl: announcementForm.imageUrl,
-              }
-            : a
-        )
-      );
-      toast({ title: "Success", description: "Announcement updated successfully" });
-    } else {
-      const newAnnouncement: Announcement = {
-        id: Date.now().toString(),
-        title: announcementForm.title,
-        content: announcementForm.content,
-        type: announcementForm.type,
-        date: announcementForm.date,
-        status: announcementForm.status,
-        imageUrl: announcementForm.imageUrl,
-      };
-      setAnnouncements([newAnnouncement, ...announcements]);
-      toast({ title: "Success", description: "Announcement created successfully" });
+    const payload = {
+      title: announcementForm.title,
+      type: announcementForm.type,
+      contentHtml: announcementForm.contentHtml || null,
+      graphicUrl: announcementForm.graphicUrl || null,
+      publishedAt: new Date(announcementForm.publishedAt).toISOString(),
+      expiresAt: announcementForm.expiresAt ? new Date(announcementForm.expiresAt).toISOString() : null,
+      pinned: announcementForm.pinned,
+    };
+
+    try {
+      const url = editingAnnouncement ? `/api/admin/announcements/${editingAnnouncement.id}` : "/api/admin/announcements";
+      const method = editingAnnouncement ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast({ title: "Success", description: `Announcement ${editingAnnouncement ? "updated" : "created"} successfully` });
+        setAnnouncementDialogOpen(false);
+        fetchData();
+      } else {
+        throw new Error("Failed to save announcement");
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save announcement", variant: "destructive" });
     }
-
-    setAnnouncementDialogOpen(false);
   };
 
-  const handleDeleteAnnouncement = (id: string) => {
-    setAnnouncements(announcements.filter((a) => a.id !== id));
-    toast({ title: "Announcement deleted successfully" });
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        toast({ title: "Announcement deleted successfully" });
+        fetchData();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete announcement", variant: "destructive" });
+    }
   };
 
-  const totalViews = sermons.reduce((sum, s) => sum + s.views, 0);
-  const avgViews = sermons.length > 0 ? Math.round(totalViews / sermons.length) : 0;
+  const handleExportSubscribers = () => {
+    const csv = [
+      ["Name", "Email", "Status", "Preferred Service Day", "Subscribed At"],
+      ...subscribers.map(s => [
+        s.name,
+        s.email,
+        s.status,
+        s.preferredServiceDay || "",
+        new Date(s.subscribedAt).toLocaleDateString(),
+      ])
+    ].map(row => row.join(",")).join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `subscribers-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <main className="min-h-screen pt-20 pb-12 bg-background">
@@ -374,124 +610,128 @@ export default function AdminDashboardPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-10">
           <div>
-            <h1 className="font-serif text-4xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent mb-2">
+            <h1 className="font-serif text-5xl font-bold text-primary mb-2">
               Admin Dashboard
             </h1>
-            <p className="text-muted-foreground">Welcome back, {adminEmail}</p>
+            <p className="text-muted-foreground text-lg">Welcome back, {adminUser?.username || adminUser?.email || 'Admin'}</p>
           </div>
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="border-primary/20 hover:bg-destructive/10 hover:text-destructive"
-            data-testid="button-admin-logout"
+            className="border-primary/30 hover:bg-destructive/20 hover:border-destructive/50 hover:text-destructive transition-all"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-            <CardHeader className="pb-3">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg hover:shadow-xl transition-all">
+            <CardHeader className="pb-3 relative">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                 <span>Total Sermons</span>
-                <BookOpen className="h-4 w-4 text-primary" />
+                <div className="p-2 rounded-full bg-primary/20">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
-                {sermons.length}
+            <CardContent className="relative">
+              <div className="text-4xl font-bold text-primary">
+                {stats?.totalSermons || 0}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">All time uploads</p>
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <Star className="h-3 w-3" />
+                {stats?.featuredSermons || 0} featured
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                <span>Total Views</span>
-                <BarChart3 className="h-4 w-4 text-primary" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
-                {totalViews.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Across all sermons</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                <span>Avg. Views</span>
-                <Eye className="h-4 w-4 text-primary" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
-                {avgViews}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Per sermon</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-            <CardHeader className="pb-3">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-accent/5 border-primary/20 shadow-lg hover:shadow-xl transition-all">
+            <CardHeader className="pb-3 relative">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                 <span>Announcements</span>
-                <Megaphone className="h-4 w-4 text-primary" />
+                <div className="p-2 rounded-full bg-secondary/20">
+                  <Megaphone className="h-5 w-5 text-secondary-foreground dark:text-secondary" />
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
-                {announcements.length}
+            <CardContent className="relative">
+              <div className="text-4xl font-bold text-secondary-foreground dark:text-secondary">
+                {stats?.totalAnnouncements || 0}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Total active</p>
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {stats?.activeAnnouncements || 0} active
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 to-green-500/5 border-emerald-500/20 shadow-lg hover:shadow-xl transition-all">
+            <CardHeader className="pb-3 relative">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                <span>Subscribers</span>
+                <div className="p-2 rounded-full bg-emerald-500/20">
+                  <Mail className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">
+                {stats?.totalSubscribers || 0}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                {stats?.activeSubscribers || 0} active
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border-cyan-500/20 shadow-lg hover:shadow-xl transition-all">
+            <CardHeader className="pb-3 relative">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                <span>Analytics</span>
+                <div className="p-2 rounded-full bg-cyan-500/20">
+                  <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-4xl font-bold text-cyan-600 dark:text-cyan-400">
+                {((stats?.activeSubscribers || 0) / Math.max(stats?.totalSubscribers || 1, 1) * 100).toFixed(0)}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Engagement rate</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="sermons" className="w-full">
-          <TabsList className="w-full md:w-auto bg-background/50 backdrop-blur-sm border border-primary/20 p-1 mb-8 flex flex-wrap">
+          <TabsList className="w-full md:w-auto bg-muted/50 border border-border p-1.5 mb-8 flex flex-wrap gap-1">
             <TabsTrigger
               value="sermons"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-sermons"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
             >
               <BookOpen className="h-4 w-4" />
               <span>Sermons</span>
             </TabsTrigger>
             <TabsTrigger
               value="announcements"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-announcements"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
             >
               <Megaphone className="h-4 w-4" />
               <span>Announcements</span>
             </TabsTrigger>
             <TabsTrigger
-              value="users"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-users"
-            >
-              <Users className="h-4 w-4" />
-              <span>Users</span>
-            </TabsTrigger>
-            <TabsTrigger
               value="subscribers"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-subscribers"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
             >
               <Mail className="h-4 w-4" />
               <span>Newsletter</span>
             </TabsTrigger>
             <TabsTrigger
               value="settings"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-settings"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
             >
               <Settings className="h-4 w-4" />
               <span>Settings</span>
@@ -499,131 +739,251 @@ export default function AdminDashboardPage() {
           </TabsList>
 
           {/* Sermons Tab */}
-          <TabsContent value="sermons" className="mt-0 space-y-4">
+          <TabsContent value="sermons" className="mt-0 space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Sermon Management</h2>
-                <p className="text-muted-foreground">Manage your sermon library</p>
+                <h2 className="text-3xl font-bold text-foreground">Sermon Management</h2>
+                <p className="text-muted-foreground mt-1">Create and manage sermon content with video time-ranges</p>
               </div>
               <Dialog open={sermonDialogOpen} onOpenChange={setSermonDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
-                    className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                    className="bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90 transition-all"
                     onClick={openAddSermonDialog}
-                    data-testid="button-add-sermon"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Sermon
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-background/95 backdrop-blur-sm border-primary/20">
+                <DialogContent className="bg-background border-border max-w-3xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>{editingSermon ? "Edit Sermon" : "Add New Sermon"}</DialogTitle>
+                    <DialogTitle className="text-2xl text-foreground">
+                      {editingSermon ? "Edit Sermon" : "Add New Sermon"}
+                    </DialogTitle>
                     <DialogDescription>
-                      {editingSermon ? "Update sermon details" : "Create a new sermon entry"}
+                      {editingSermon ? "Update sermon details and video time-range" : "Create a new sermon entry with YouTube time-range"}
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Title</label>
+                      <Label className="mb-2 block">Title *</Label>
                       <Input
                         value={sermonForm.title}
                         onChange={(e) => setSermonForm({ ...sermonForm, title: e.target.value })}
-                        placeholder="Sermon title"
-                        className="bg-background/50 border-primary/20"
-                        data-testid="input-sermon-title"
+                        placeholder="The Power of Persistent Prayer"
                       />
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="mb-2 block">Preacher *</Label>
+                        <Input
+                          value={sermonForm.preacher}
+                          onChange={(e) => setSermonForm({ ...sermonForm, preacher: e.target.value })}
+                          placeholder="Pastor John"
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-2 block">Service Day *</Label>
+                        <Select value={sermonForm.serviceDay} onValueChange={(value) => setSermonForm({ ...sermonForm, serviceDay: value })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sun">Sunday - Saviour's Exaltation</SelectItem>
+                            <SelectItem value="tue">Tuesday - Scripture Expository</SelectItem>
+                            <SelectItem value="fri">Friday - Spirit Empowerment</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Preacher</label>
+                      <Label className="mb-2 block">Date *</Label>
                       <Input
-                        value={sermonForm.preacher}
-                        onChange={(e) => setSermonForm({ ...sermonForm, preacher: e.target.value })}
-                        placeholder="Preacher name"
-                        className="bg-background/50 border-primary/20"
-                        data-testid="input-sermon-preacher"
+                        type="date"
+                        value={sermonForm.date}
+                        onChange={(e) => setSermonForm({ ...sermonForm, date: e.target.value })}
                       />
                     </div>
+
                     <div>
-                      <label className="text-sm font-medium mb-1 block">YouTube URL</label>
+                      <Label className="mb-2 flex items-center gap-2">
+                        <Video className="h-4 w-4" />
+                        YouTube URL *
+                      </Label>
                       <Input
-                        value={sermonForm.youtubeUrl}
-                        onChange={(e) => setSermonForm({ ...sermonForm, youtubeUrl: e.target.value })}
+                        value={sermonForm.videoUrl}
+                        onChange={(e) => setSermonForm({ ...sermonForm, videoUrl: e.target.value })}
+                        onBlur={(e) => fetchYouTubeMetadata(e.target.value)}
                         placeholder="https://www.youtube.com/watch?v=..."
-                        className="bg-background/50 border-primary/20"
-                        data-testid="input-sermon-youtube"
                       />
+                      <p className="text-muted-foreground text-xs mt-1">Paste a YouTube URL and we'll auto-fill the title</p>
                     </div>
-                    {sermonForm.youtubeUrl && extractYouTubeVideoId(sermonForm.youtubeUrl) && (
-                      <div className="rounded-lg overflow-hidden border border-primary/20">
+
+                    {/* Video Preview */}
+                    {sermonForm.videoUrl && extractYouTubeVideoId(sermonForm.videoUrl) && (
+                      <div className="rounded-xl overflow-hidden border-2 border-border shadow-lg">
                         <iframe
                           width="100%"
-                          height="200"
-                          src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sermonForm.youtubeUrl)}`}
+                          height="320"
+                          src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sermonForm.videoUrl)}?start=${parseTimeToSeconds(sermonForm.startTime)}${sermonForm.endTime ? `&end=${parseTimeToSeconds(sermonForm.endTime)}` : ''}`}
                           title="YouTube video preview"
                           frameBorder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
-                          data-testid="preview-youtube-video"
                         />
+                        <div className="bg-muted p-3 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4 inline mr-2" />
+                          Preview shows video from {sermonForm.startTime} {sermonForm.endTime && `to ${sermonForm.endTime}`}
+                        </div>
                       </div>
                     )}
-                    <div className="grid grid-cols-3 gap-4">
+
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium mb-1 block">Date</label>
-                        <Input
-                          value={sermonForm.date}
-                          onChange={(e) => setSermonForm({ ...sermonForm, date: e.target.value })}
-                          placeholder="Nov 24, 2024"
-                          className="bg-background/50 border-primary/20"
-                          data-testid="input-sermon-date"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Start Time</label>
+                        <Label className="mb-2 block">Start Time (MM:SS) *</Label>
                         <Input
                           value={sermonForm.startTime}
                           onChange={(e) => setSermonForm({ ...sermonForm, startTime: e.target.value })}
                           placeholder="0:00"
-                          className="bg-background/50 border-primary/20"
-                          data-testid="input-sermon-start-time"
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-1 block">End Time</label>
+                        <Label className="mb-2 block">End Time (MM:SS)</Label>
                         <Input
                           value={sermonForm.endTime}
                           onChange={(e) => setSermonForm({ ...sermonForm, endTime: e.target.value })}
                           placeholder="45:30"
-                          className="bg-background/50 border-primary/20"
-                          data-testid="input-sermon-end-time"
                         />
                       </div>
                     </div>
+
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Views</label>
-                      <Input
-                        type="number"
-                        value={sermonForm.views}
-                        onChange={(e) => setSermonForm({ ...sermonForm, views: e.target.value })}
-                        placeholder="0"
-                        className="bg-background/50 border-primary/20"
-                        data-testid="input-sermon-views"
+                      <Label className="mb-2 block">Excerpt</Label>
+                      <Textarea
+                        value={sermonForm.excerpt}
+                        onChange={(e) => setSermonForm({ ...sermonForm, excerpt: e.target.value })}
+                        placeholder="Brief description of the sermon..."
+                        className="min-h-[80px]"
                       />
                     </div>
-                    <div className="flex gap-2 pt-4">
+
+                    {/* Sermon Outline Section */}
+                    <div className="space-y-3">
+                      <Label className="mb-2 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Sermon Outline
+                      </Label>
+                      
+                      {/* Document Upload */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <input
+                            id="outline-upload"
+                            type="file"
+                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleOutlineDocumentUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            disabled={outlineUploading}
+                            aria-label="Upload sermon outline document"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                            disabled={outlineUploading}
+                          >
+                            {outlineUploading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Extracting text...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4" />
+                                Upload DOCX or PDF
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {sermonForm.outline && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSermonForm({ ...sermonForm, outline: "" })}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Upload a document to automatically extract the outline text. Only PDF and DOCX files are supported.
+                      </p>
+                      
+                      {/* Outline Text Editor */}
+                      <Textarea
+                        value={sermonForm.outline}
+                        onChange={(e) => setSermonForm({ ...sermonForm, outline: e.target.value })}
+                        placeholder="Sermon outline will appear here after uploading a document, or type/paste directly..."
+                        className="min-h-[200px] font-mono text-sm"
+                      />
+                      
+                      {/* Preview */}
+                      {sermonForm.outline && (
+                        <div className="rounded-lg border border-border p-4 bg-muted/30">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Preview ({sermonForm.outline.length} characters)</p>
+                          <div className="text-sm max-h-[150px] overflow-y-auto whitespace-pre-wrap">
+                            {sermonForm.outline.slice(0, 500)}
+                            {sermonForm.outline.length > 500 && "..."}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="mb-2 block">Scriptures (comma-separated)</Label>
+                        <Input
+                          value={sermonForm.scriptures}
+                          onChange={(e) => setSermonForm({ ...sermonForm, scriptures: e.target.value })}
+                          placeholder="John 3:16, Romans 8:28"
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-2 block">Tags (comma-separated)</Label>
+                        <Input
+                          value={sermonForm.tags}
+                          onChange={(e) => setSermonForm({ ...sermonForm, tags: e.target.value })}
+                          placeholder="prayer, faith, revival"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 p-4 rounded-lg bg-primary/10 border border-border">
+                      <Switch
+                        id="featured"
+                        checked={sermonForm.featured}
+                        onCheckedChange={(checked) => setSermonForm({ ...sermonForm, featured: checked })}
+                      />
+                      <Label htmlFor="featured" className="cursor-pointer flex items-center gap-2">
+                        <Star className="h-4 w-4" />
+                        Mark as Featured Sermon
+                      </Label>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
                       <Button
                         onClick={handleSaveSermon}
-                        className="flex-1 bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
-                        data-testid="button-save-sermon"
+                        className="flex-1 bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90"
                       >
-                        {editingSermon ? "Update" : "Add"} Sermon
+                        {editingSermon ? "Update" : "Create"} Sermon
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => setSermonDialogOpen(false)}
-                        className="border-primary/20"
-                        data-testid="button-cancel-sermon"
                       >
                         Cancel
                       </Button>
@@ -633,63 +993,65 @@ export default function AdminDashboardPage() {
               </Dialog>
             </div>
 
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20 overflow-hidden">
+            <Card className="border-border shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-primary/10">
+                    <TableRow>
                       <TableHead>Title</TableHead>
                       <TableHead>Preacher</TableHead>
+                      <TableHead>Service Day</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Time Range</TableHead>
-                      <TableHead>YouTube</TableHead>
-                      <TableHead>Views</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sermons.map((sermon) => (
-                      <TableRow key={sermon.id} className="border-primary/10">
-                        <TableCell className="font-medium">{sermon.title}</TableCell>
+                      <TableRow key={sermon.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {sermon.featured && <Star className="h-4 w-4 text-primary fill-primary" />}
+                            {sermon.title}
+                          </div>
+                        </TableCell>
                         <TableCell>{sermon.preacher}</TableCell>
-                        <TableCell>{sermon.date}</TableCell>
-                        <TableCell className="text-sm">
-                          {sermon.startTime} - {sermon.endTime}
+                        <TableCell>
+                          <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
+                            {sermon.serviceDay === 'sun' ? 'Sun' : sermon.serviceDay === 'tue' ? 'Tue' : 'Fri'}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(sermon.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatTime(sermon.startSec)} - {sermon.endSec ? formatTime(sermon.endSec) : '∞'}
                         </TableCell>
                         <TableCell>
                           <a
-                            href={sermon.youtubeUrl}
+                            href={sermon.videoUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline text-sm truncate max-w-xs"
-                            data-testid={`link-youtube-${sermon.id}`}
+                            className="text-primary hover:underline text-sm flex items-center gap-1"
                           >
-                            Watch Video
+                            <Video className="h-3 w-3" />
+                            Watch
                           </a>
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                            <Eye className="h-3 w-3" />
-                            {sermon.views}
-                          </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8"
+                              className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
                               onClick={() => openEditSermonDialog(sermon)}
-                              data-testid={`button-edit-sermon-${sermon.id}`}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8 hover:text-destructive"
+                              className="h-8 w-8 hover:bg-destructive/20 hover:text-destructive"
                               onClick={() => handleDeleteSermon(sermon.id)}
-                              data-testid={`button-delete-sermon-${sermon.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -704,164 +1066,237 @@ export default function AdminDashboardPage() {
           </TabsContent>
 
           {/* Announcements Tab */}
-          <TabsContent value="announcements" className="mt-0 space-y-4">
+          <TabsContent value="announcements" className="mt-0 space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Announcement Management</h2>
-                <p className="text-muted-foreground">Create and manage church announcements</p>
+                <h2 className="text-3xl font-bold text-foreground">Announcement Management</h2>
+                <p className="text-muted-foreground mt-1">Create graphic or text-only announcements</p>
               </div>
               <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
-                    className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                    className="bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90 transition-all"
                     onClick={openAddAnnouncementDialog}
-                    data-testid="button-add-announcement"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     New Announcement
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-background/95 backdrop-blur-sm border-primary/20 max-w-2xl">
+                <DialogContent className="bg-background/95 backdrop-blur-xl border-border max-w-3xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>
+                    <DialogTitle className="text-2xl text-foreground">
                       {editingAnnouncement ? "Edit Announcement" : "Create New Announcement"}
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-muted-foreground">
                       {editingAnnouncement ? "Update announcement details" : "Create a new church announcement"}
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Title</label>
+                      <Label className="text-foreground mb-2 block">Title *</Label>
                       <Input
                         value={announcementForm.title}
-                        onChange={(e) =>
-                          setAnnouncementForm({ ...announcementForm, title: e.target.value })
-                        }
-                        placeholder="Announcement title"
-                        className="bg-background/50 border-primary/20"
-                        data-testid="input-announcement-title"
+                        onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                        placeholder="Holiday Service Schedule"
+                        className="bg-background/50 border-border focus:border-primary text-foreground placeholder:text-muted-foreground"
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Content</label>
-                      <textarea
-                        value={announcementForm.content}
-                        onChange={(e) =>
-                          setAnnouncementForm({ ...announcementForm, content: e.target.value })
-                        }
-                        placeholder="Announcement content..."
-                        className="w-full p-2 rounded-md bg-background/50 border border-primary/20 text-sm"
-                        rows={4}
-                        data-testid="input-announcement-content"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Type</label>
-                        <select
-                          value={announcementForm.type}
-                          onChange={(e) =>
-                            setAnnouncementForm({
-                              ...announcementForm,
-                              type: e.target.value as "text" | "graphic",
-                            })
-                          }
-                          className="w-full p-2 rounded-md bg-background/50 border border-primary/20 text-sm"
-                          data-testid="select-announcement-type"
+
+                    {/* Announcement Type Selection */}
+                    <div className="space-y-3">
+                      <Label className="text-foreground mb-2 block">Announcement Type *</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setAnnouncementForm({ ...announcementForm, type: "non_graphic", graphicUrl: "" })}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
+                            announcementForm.type === "non_graphic"
+                              ? "border-primary bg-primary/10 shadow-lg"
+                              : "border-border hover:border-primary/50 bg-background/50"
+                          }`}
                         >
-                          <option value="text">Text Only</option>
-                          <option value="graphic">Graphic</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Status</label>
-                        <select
-                          value={announcementForm.status}
-                          onChange={(e) =>
-                            setAnnouncementForm({
-                              ...announcementForm,
-                              status: e.target.value as "active" | "scheduled" | "archived",
-                            })
-                          }
-                          className="w-full p-2 rounded-md bg-background/50 border border-primary/20 text-sm"
-                          data-testid="select-announcement-status"
+                          <div className={`p-3 rounded-full ${announcementForm.type === "non_graphic" ? "bg-primary/20" : "bg-muted"}`}>
+                            <FileText className={`h-6 w-6 ${announcementForm.type === "non_graphic" ? "text-primary" : "text-muted-foreground"}`} />
+                          </div>
+                          <div className="text-center">
+                            <p className={`font-medium ${announcementForm.type === "non_graphic" ? "text-primary" : "text-foreground"}`}>Text Only</p>
+                            <p className="text-xs text-muted-foreground mt-1">Simple text announcement</p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAnnouncementForm({ ...announcementForm, type: "graphic" })}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
+                            announcementForm.type === "graphic"
+                              ? "border-primary bg-primary/10 shadow-lg"
+                              : "border-border hover:border-primary/50 bg-background/50"
+                          }`}
                         >
-                          <option value="active">Active</option>
-                          <option value="scheduled">Scheduled</option>
-                          <option value="archived">Archived</option>
-                        </select>
+                          <div className={`p-3 rounded-full ${announcementForm.type === "graphic" ? "bg-primary/20" : "bg-muted"}`}>
+                            <ImageIcon className={`h-6 w-6 ${announcementForm.type === "graphic" ? "text-primary" : "text-muted-foreground"}`} />
+                          </div>
+                          <div className="text-center">
+                            <p className={`font-medium ${announcementForm.type === "graphic" ? "text-primary" : "text-foreground"}`}>With Graphic</p>
+                            <p className="text-xs text-muted-foreground mt-1">Includes an image/flyer</p>
+                          </div>
+                        </button>
                       </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Date</label>
-                      <Input
-                        value={announcementForm.date}
-                        onChange={(e) =>
-                          setAnnouncementForm({ ...announcementForm, date: e.target.value })
-                        }
-                        placeholder="Nov 20, 2024"
-                        className="bg-background/50 border-primary/20"
-                        data-testid="input-announcement-date"
-                      />
-                    </div>
+
+                    {/* Graphic Image - Only shown for graphic type */}
                     {announcementForm.type === "graphic" && (
-                      <>
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">Upload Image (1:1 ratio)</label>
-                          <div className="border border-dashed border-primary/30 rounded-lg p-4 text-center bg-background/30 hover:bg-background/50 transition-colors">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    if (typeof event.target?.result === "string") {
-                                      setAnnouncementForm({
-                                        ...announcementForm,
-                                        imageUrl: event.target.result,
-                                      });
-                                    }
-                                  };
-                                  reader.readAsDataURL(e.target.files[0]);
-                                }
-                              }}
-                              className="hidden"
-                              id="image-upload"
-                              data-testid="input-announcement-image"
-                            />
-                            <label htmlFor="image-upload" className="cursor-pointer block">
-                              <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
-                              <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF up to 10MB</p>
-                            </label>
+                      <div className="space-y-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                        <Label className="text-foreground flex items-center gap-2">
+                          <ImageIcon className="h-4 w-4" />
+                          Graphic Image *
+                        </Label>
+                        
+                        {/* Upload from Computer */}
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-foreground">Upload from Computer</p>
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex-1">
+                              <input
+                                id="graphic-upload"
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onChange={handleGraphicImageUpload}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                disabled={graphicUploading}
+                                aria-label="Upload announcement graphic"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-start gap-2"
+                                disabled={graphicUploading}
+                              >
+                                {graphicUploading ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4" />
+                                    Choose Image (JPEG, PNG, GIF, WebP)
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Max file size: 5MB. Recommended: 16:9 or 1:1 aspect ratio.</p>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-primary/5 px-2 text-muted-foreground">or</span>
                           </div>
                         </div>
-                        {announcementForm.imageUrl && (
-                          <div className="rounded-lg overflow-hidden border border-primary/20">
+
+                        {/* Paste URL */}
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-foreground">Paste Image URL</p>
+                          <Input
+                            value={announcementForm.graphicUrl}
+                            onChange={(e) => setAnnouncementForm({ ...announcementForm, graphicUrl: e.target.value })}
+                            placeholder="https://example.com/image.jpg"
+                            className="bg-background/50 border-border focus:border-primary text-foreground placeholder:text-muted-foreground"
+                          />
+                        </div>
+
+                        {/* Preview */}
+                        {announcementForm.graphicUrl && (
+                          <div className="rounded-xl overflow-hidden border-2 border-border shadow-lg mt-3">
                             <img
-                              src={announcementForm.imageUrl}
+                              src={announcementForm.graphicUrl}
                               alt="Announcement preview"
-                              className="w-full aspect-square object-cover"
-                              data-testid="preview-announcement-image"
+                              className="w-full max-h-[300px] object-contain bg-black/50"
+                              onError={(e) => {
+                                e.currentTarget.src = "https://placehold.co/600x400/1a1525/efc64e?text=Invalid+Image";
+                              }}
                             />
+                            <div className="bg-muted p-2 flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground flex items-center gap-2">
+                                <ImageIcon className="h-3 w-3" />
+                                Graphic preview
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAnnouncementForm({ ...announcementForm, graphicUrl: "" })}
+                                className="h-6 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                Remove
+                              </Button>
+                            </div>
                           </div>
                         )}
-                      </>
+                      </div>
                     )}
-                    <div className="flex gap-2 pt-4">
+
+                    <div>
+                      <Label className="text-foreground mb-2 block">
+                        {announcementForm.type === "graphic" ? "Caption / Description (optional)" : "Content *"}
+                      </Label>
+                      <Textarea
+                        value={announcementForm.contentHtml}
+                        onChange={(e) => setAnnouncementForm({ ...announcementForm, contentHtml: e.target.value })}
+                        placeholder="Announcement content..."
+                        className="bg-background/50 border-border focus:border-primary text-foreground placeholder:text-muted-foreground min-h-[120px]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-foreground mb-2 block">Published Date *</Label>
+                        <Input
+                          type="date"
+                          value={announcementForm.publishedAt}
+                          onChange={(e) => setAnnouncementForm({ ...announcementForm, publishedAt: e.target.value })}
+                          className="bg-background/50 border-border focus:border-primary text-foreground"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-foreground mb-2 block">Expires Date (optional)</Label>
+                        <Input
+                          type="date"
+                          value={announcementForm.expiresAt}
+                          onChange={(e) => setAnnouncementForm({ ...announcementForm, expiresAt: e.target.value })}
+                          className="bg-background/50 border-border focus:border-primary text-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 p-4 rounded-lg bg-primary/10 border border-border">
+                      <Switch
+                        id="pinned"
+                        checked={announcementForm.pinned}
+                        onCheckedChange={(checked) => setAnnouncementForm({ ...announcementForm, pinned: checked })}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                      <Label htmlFor="pinned" className="text-foreground cursor-pointer flex items-center gap-2">
+                        <Pin className="h-4 w-4" />
+                        Pin to Top of Announcements
+                      </Label>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
                       <Button
                         onClick={handleSaveAnnouncement}
-                        className="flex-1 bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
-                        data-testid="button-save-announcement"
+                        className="flex-1 bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90"
                       >
                         {editingAnnouncement ? "Update" : "Create"} Announcement
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => setAnnouncementDialogOpen(false)}
-                        className="border-primary/20"
-                        data-testid="button-cancel-announcement"
+                        className="border-border hover:bg-accent"
                       >
                         Cancel
                       </Button>
@@ -871,46 +1306,73 @@ export default function AdminDashboardPage() {
               </Dialog>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {announcements.map((announcement) => (
                 <Card
                   key={announcement.id}
-                  className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all flex flex-col"
-                  data-testid={`card-announcement-admin-${announcement.id}`}
+                  className="bg-card/20 backdrop-blur-xl border-border hover:border-primary/50 transition-all shadow-lg hover:shadow-primary/10 flex flex-col overflow-hidden"
                 >
-                  <CardHeader>
+                  {announcement.type === "graphic" && announcement.graphicUrl && (
+                    <div className="w-full aspect-video overflow-hidden">
+                      <img
+                        src={announcement.graphicUrl}
+                        alt={announcement.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <CardHeader className={announcement.type === "non_graphic" ? "pb-2" : ""}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <CardTitle className="text-lg">{announcement.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {announcement.type === "text" ? "Text Announcement" : "Graphic Announcement"}
-                        </CardDescription>
+                        <div className="flex items-center gap-2 mb-2">
+                          {announcement.pinned && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#efc64e]/20 text-[#b5621b]">
+                              <Pin className="h-3 w-3 mr-1" />
+                              Pinned
+                            </span>
+                          )}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            announcement.type === "graphic" 
+                              ? "bg-blue-500/20 text-blue-400" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {announcement.type === "graphic" ? (
+                              <><ImageIcon className="h-3 w-3 mr-1" /> Graphic</>
+                            ) : (
+                              <><FileText className="h-3 w-3 mr-1" /> Text</>
+                            )}
+                          </span>
+                        </div>
+                        <CardTitle className="text-lg text-foreground">
+                          {announcement.title}
+                        </CardTitle>
                       </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                          announcement.status === "active"
-                            ? "bg-green-500/20 text-green-700 dark:text-green-400"
-                            : announcement.status === "scheduled"
-                            ? "bg-blue-500/20 text-blue-700 dark:text-blue-400"
-                            : "bg-gray-500/20 text-gray-700 dark:text-gray-400"
-                        }`}
-                      >
-                        {announcement.status}
-                      </span>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col">
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
-                      {announcement.content}
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-4">{announcement.date}</p>
+                    {announcement.contentHtml && (
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
+                        {announcement.contentHtml.replace(/<[^>]*>/g, '')}
+                      </p>
+                    )}
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-3 w-3" />
+                        Published: {new Date(announcement.publishedAt).toLocaleDateString()}
+                      </p>
+                      {announcement.expiresAt && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          Expires: {new Date(announcement.expiresAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 border-primary/20"
+                        className="flex-1 border-border hover:bg-primary/20 hover:text-primary"
                         onClick={() => openEditAnnouncementDialog(announcement)}
-                        data-testid={`button-edit-announcement-${announcement.id}`}
                       >
                         <Edit2 className="h-3 w-3 mr-1" />
                         Edit
@@ -918,9 +1380,8 @@ export default function AdminDashboardPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 border-primary/20 hover:text-destructive hover:border-destructive"
+                        className="flex-1 border-border hover:bg-destructive/20 hover:text-destructive hover:border-destructive"
                         onClick={() => handleDeleteAnnouncement(announcement.id)}
-                        data-testid={`button-delete-announcement-${announcement.id}`}
                       >
                         <Trash2 className="h-3 w-3 mr-1" />
                         Delete
@@ -933,81 +1394,77 @@ export default function AdminDashboardPage() {
           </TabsContent>
 
           {/* Newsletter Subscribers Tab */}
-          <TabsContent value="subscribers" className="mt-0 space-y-4">
+          <TabsContent value="subscribers" className="mt-0 space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Newsletter Subscribers</h2>
-                <p className="text-muted-foreground">People who joined the mailing list</p>
+                <h2 className="text-3xl font-bold text-foreground">Newsletter Subscribers</h2>
+                <p className="text-muted-foreground mt-1">Manage your mailing list</p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="border-primary/20" data-testid="button-export-subscribers">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
-              </div>
+              <Button
+                onClick={handleExportSubscribers}
+                variant="outline"
+                className="border-border bg-card/20 backdrop-blur-md hover:bg-primary/20 hover:border-primary transition-all"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
             </div>
 
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
+            <Card className="bg-card/20 backdrop-blur-xl border-border shadow-xl overflow-hidden">
               <CardHeader>
-                <CardTitle>Subscriber Statistics</CardTitle>
+                <CardTitle className="text-foreground">Subscriber Statistics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="bg-background/50 backdrop-blur-sm border-primary/10">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Subscribers</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-[#efc64e]">{subscribers.length}</div>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-background/50 backdrop-blur-sm border-primary/10">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-green-500">
-                        {subscribers.filter((s) => s.status === "active").length}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-background/50 backdrop-blur-sm border-primary/10">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Unsubscribed</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-red-500">
-                        {subscribers.filter((s) => s.status === "unsubscribed").length}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="p-4 rounded-lg bg-primary/20 border border-border">
+                    <p className="text-sm text-muted-foreground mb-1">Total Subscribers</p>
+                    <p className="text-3xl font-bold text-foreground">{subscribers.length}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-green-500/20 to-transparent border border-green-500/30">
+                    <p className="text-sm text-green-300/80 mb-1">Active</p>
+                    <p className="text-3xl font-bold text-green-300">{subscribers.filter(s => s.status === "active").length}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-red-500/20 to-transparent border border-red-500/30">
+                    <p className="text-sm text-red-300/80 mb-1">Unsubscribed</p>
+                    <p className="text-3xl font-bold text-red-300">{subscribers.filter(s => s.status === "unsubscribed").length}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20 overflow-hidden">
+            <Card className="bg-card/20 backdrop-blur-xl border-border shadow-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-primary/10">
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Joined Date</TableHead>
-                      <TableHead>Status</TableHead>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground">Name</TableHead>
+                      <TableHead className="text-muted-foreground">Email</TableHead>
+                      <TableHead className="text-muted-foreground">Preferred Service</TableHead>
+                      <TableHead className="text-muted-foreground">Joined Date</TableHead>
+                      <TableHead className="text-muted-foreground">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {subscribers.map((subscriber) => (
-                      <TableRow key={subscriber.id} className="border-primary/10">
-                        <TableCell className="font-medium">{subscriber.name}</TableCell>
-                        <TableCell>{subscriber.email}</TableCell>
-                        <TableCell>{subscriber.joinedDate}</TableCell>
+                      <TableRow key={subscriber.id} className="border-border/50 hover:bg-accent/50">
+                        <TableCell className="font-medium text-foreground">{subscriber.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{subscriber.email}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {subscriber.preferredServiceDay ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
+                              {subscriber.preferredServiceDay === 'sun' ? 'Sunday' : subscriber.preferredServiceDay === 'tue' ? 'Tuesday' : 'Friday'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{new Date(subscriber.subscribedAt).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               subscriber.status === "active"
-                                ? "bg-green-500/20 text-green-700 dark:text-green-400"
-                                : "bg-red-500/20 text-red-700 dark:text-red-400"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-red-500/20 text-red-400"
                             }`}
                           >
                             {subscriber.status}
@@ -1021,132 +1478,54 @@ export default function AdminDashboardPage() {
             </Card>
           </TabsContent>
 
-          {/* Users Tab */}
-          <TabsContent value="users" className="mt-0 space-y-4">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">User Management</h2>
-                <p className="text-muted-foreground">Manage admin users and permissions</p>
-              </div>
-              <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Admin User
-              </Button>
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="mt-0 space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground mb-2">Site Settings</h2>
+              <p className="text-muted-foreground">Configure your church website settings</p>
             </div>
 
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
+            <Card className="bg-card/20 backdrop-blur-xl border-border shadow-xl">
               <CardHeader>
-                <CardTitle>Admin Users</CardTitle>
-                <CardDescription>Currently assigned administrators</CardDescription>
+                <CardTitle className="text-foreground">Church Information</CardTitle>
+                <CardDescription className="text-muted-foreground">Update your church details</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-primary/10">
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow className="border-primary/10">
-                        <TableCell className="font-medium">{adminEmail}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium">
-                            Super Admin
-                          </span>
-                        </TableCell>
-                        <TableCell>2024-10-01</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="border-primary/20">
-                            Edit
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-foreground mb-2 block">Church Name</Label>
+                    <Input
+                      defaultValue="Old Time Power Church"
+                      className="bg-background/50 border-border focus:border-primary text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-foreground mb-2 block">Email</Label>
+                    <Input
+                      defaultValue="info@otpchurch.org"
+                      className="bg-background/50 border-border focus:border-primary text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-foreground mb-2 block">Phone</Label>
+                    <Input
+                      defaultValue="+1 (234) 567-890"
+                      className="bg-background/50 border-border focus:border-primary text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-foreground mb-2 block">Location</Label>
+                    <Input
+                      defaultValue="123 Church Street, City, Country"
+                      className="bg-background/50 border-border focus:border-primary text-foreground"
+                    />
+                  </div>
                 </div>
+                <Button className="bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90">
+                  Save Changes
+                </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="mt-0 space-y-4">
-            <div>
-              <h2 className="text-2xl font-bold mb-6">Site Settings</h2>
-
-              <div className="space-y-4">
-                <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-                  <CardHeader>
-                    <CardTitle>Church Information</CardTitle>
-                    <CardDescription>Update your church details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Church Name</label>
-                        <Input
-                          defaultValue="Old Time Power Church"
-                          className="bg-background/50 border-primary/20"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Email</label>
-                        <Input
-                          defaultValue="info@otpchurch.org"
-                          className="bg-background/50 border-primary/20"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Phone</label>
-                        <Input
-                          defaultValue="+1 (234) 567-890"
-                          className="bg-background/50 border-primary/20"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Location</label>
-                        <Input
-                          defaultValue="123 Church Street, City, Country"
-                          className="bg-background/50 border-primary/20"
-                        />
-                      </div>
-                    </div>
-                    <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                      <Download className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-                  <CardHeader>
-                    <CardTitle>Newsletter Settings</CardTitle>
-                    <CardDescription>Configure newsletter preferences</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Newsletter Email</label>
-                      <Input
-                        defaultValue="newsletter@otpchurch.org"
-                        className="bg-background/50 border-primary/20"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="newsletter" defaultChecked className="w-4 h-4" />
-                      <label htmlFor="newsletter" className="text-sm">
-                        Enable newsletter subscriptions
-                      </label>
-                    </div>
-                    <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                      Save Changes
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

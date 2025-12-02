@@ -1,7 +1,8 @@
 import { Sun, BookOpen, Flame, Heart, Users, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import logoImage from "@assets/OTPC-removebg-preview_1764645088059.png";
+
+const logoImage = "/images/OTPC-removebg-preview.png";
 
 const coreBeliefs = [
   {

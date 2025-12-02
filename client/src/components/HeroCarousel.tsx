@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import heroSlide1 from "@assets/generated_images/subtle_golden_radial_glow_background.png";
-import heroSlide2 from "@assets/generated_images/worship_prayer_blurred_silhouettes.png";
-import heroSlide3 from "@assets/generated_images/bible_with_dove_light_ray.png";
+
+// Use actual generated images from public folder
+const heroSlide1 = "/images/generated_images/subtle_golden_radial_glow_background.png";
+const heroSlide2 = "/images/generated_images/worship_prayer_blurred_silhouettes.png";
+const heroSlide3 = "/images/generated_images/bible_with_dove_light_ray.png";
 
 interface Slide {
   image: string;

@@ -1,32 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { UserPlus, LogIn } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [hasExistingAdmin, setHasExistingAdmin] = useState(true);
   const { toast } = useToast();
+
+  // Check if any admin exists (for initial setup)
+  useEffect(() => {
+    const checkAdminExists = async () => {
+      try {
+        const response = await fetch("/api/admin/stats");
+        if (response.status === 404 || response.status === 500) {
+          // No admin exists yet, allow registration
+          setHasExistingAdmin(false);
+          setIsRegisterMode(true);
+        }
+      } catch {
+        // Assume no admin exists if we can't check
+        setHasExistingAdmin(false);
+        setIsRegisterMode(true);
+      }
+    };
+    checkAdminExists();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // TODO: Replace with actual API call to backend
-      if (email === "admin@otpchurch.org" && password === "admin123") {
-        localStorage.setItem("adminToken", "valid");
-        localStorage.setItem("adminEmail", email);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("adminToken", data.token);
+        localStorage.setItem("adminUser", JSON.stringify(data.user));
         toast({ title: "Success", description: "Logged in successfully" });
         setLocation("/admin/dashboard");
       } else {
         toast({
           title: "Error",
-          description: "Invalid email or password",
+          description: data.error || "Invalid email or password",
           variant: "destructive",
         });
       }
@@ -41,23 +71,85 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, role: "admin" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("adminToken", data.token);
+        localStorage.setItem("adminUser", JSON.stringify(data.user));
+        toast({ title: "Success", description: "Admin account created successfully!" });
+        setLocation("/admin/dashboard");
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Registration failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Registration failed. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen pt-20 pb-12 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="font-serif text-4xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent mb-2">
-            Admin Login
+            {isRegisterMode ? "Create Admin Account" : "Admin Login"}
           </h1>
           <p className="text-muted-foreground">Old Time Power Church Management</p>
         </div>
 
         <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Enter your admin credentials to access the dashboard</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              {isRegisterMode ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+              {isRegisterMode ? "Register" : "Sign In"}
+            </CardTitle>
+            <CardDescription>
+              {isRegisterMode 
+                ? "Create your admin account to manage the church website"
+                : "Enter your admin credentials to access the dashboard"
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={isRegisterMode ? handleRegister : handleLogin} className="space-y-4">
+              {isRegisterMode && (
+                <div className="space-y-2">
+                  <label htmlFor="username" className="text-sm font-medium">
+                    Username
+                  </label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="admin"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={isLoading}
+                    className="bg-background/50 border-primary/20"
+                    required
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
                   Email
@@ -65,12 +157,13 @@ export default function AdminLoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@otpchurch.org"
+                  placeholder="admin@yourchurch.org"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                   data-testid="input-admin-email"
                   className="bg-background/50 border-primary/20"
+                  required
                 />
               </div>
 
@@ -87,6 +180,8 @@ export default function AdminLoginPage() {
                   disabled={isLoading}
                   data-testid="input-admin-password"
                   className="bg-background/50 border-primary/20"
+                  required
+                  minLength={6}
                 />
               </div>
 
@@ -96,19 +191,37 @@ export default function AdminLoginPage() {
                 className="w-full bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
                 data-testid="button-admin-login"
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading 
+                  ? (isRegisterMode ? "Creating account..." : "Signing in...") 
+                  : (isRegisterMode ? "Create Admin Account" : "Sign In")
+                }
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-background/30 rounded-lg border border-primary/10">
-              <p className="text-sm text-muted-foreground">
-                <strong>Demo Credentials:</strong>
-                <br />
-                Email: admin@otpchurch.org
-                <br />
-                Password: admin123
-              </p>
-            </div>
+            {hasExistingAdmin && (
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterMode(!isRegisterMode)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {isRegisterMode 
+                    ? "Already have an account? Sign in" 
+                    : "Need to create an account? Register"
+                  }
+                </button>
+              </div>
+            )}
+
+            {!hasExistingAdmin && (
+              <div className="mt-6 p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  <strong>First Time Setup:</strong>
+                  <br />
+                  No admin account exists yet. Please create one to get started.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

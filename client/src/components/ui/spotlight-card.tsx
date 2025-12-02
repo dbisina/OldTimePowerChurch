@@ -8,6 +8,8 @@ interface SpotlightCardProps {
   width?: string | number;
   height?: string | number;
   customSize?: boolean;
+  onClick?: () => void;
+  'data-testid'?: string;
 }
 
 const glowColorMap = {
@@ -33,7 +35,9 @@ const SpotlightCard: React.FC<SpotlightCardProps> = ({
   size = 'md',
   width,
   height,
-  customSize = false
+  customSize = false,
+  onClick,
+  'data-testid': dataTestId,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -165,6 +169,8 @@ const SpotlightCard: React.FC<SpotlightCardProps> = ({
       <div
         ref={cardRef}
         data-spotlight
+        data-testid={dataTestId}
+        onClick={onClick}
         style={getInlineStyles()}
         className={`
           ${getSizeClasses()}

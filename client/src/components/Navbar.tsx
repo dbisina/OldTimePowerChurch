@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import logoImage from "@assets/OTPC-removebg-preview_1764645088059.png";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -49,7 +48,7 @@ export function Navbar({ onConnectClick }: NavbarProps) {
       <nav className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 group" data-testid="link-home-logo">
           <div className={`transition-all duration-300 ${scrolled ? "scale-90" : "scale-100"}`}>
-            <img src={logoImage} alt="Old Time Power Church" className="h-12 w-12 object-contain" />
+            <img src="/images/OTPC-removebg-preview.png" alt="Old Time Power Church" className="h-12 w-12 object-contain" />
           </div>
           <span className={`font-serif font-bold text-lg hidden sm:block transition-all duration-300 ${
             scrolled 
