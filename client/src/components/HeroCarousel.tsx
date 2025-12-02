@@ -92,7 +92,7 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
 
       <div className="relative h-full flex items-center justify-center px-4">
         <div className="max-w-4xl text-center space-y-6">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-primary leading-tight drop-shadow-lg">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight drop-shadow-lg bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
             {slide.headline}
           </h2>
           <p className="text-xl md:text-2xl text-foreground/90 max-w-2xl mx-auto">
@@ -103,7 +103,7 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
               <Button
                 onClick={onConnectClick}
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 shadow-lg shadow-primary/30"
+                className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-lg px-8 shadow-lg shadow-[#efc64e]/30 border-0"
                 data-testid="button-hero-primary"
               >
                 {slide.ctaPrimary.text}
@@ -112,7 +112,7 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
               <a href={slide.ctaPrimary.href}>
                 <Button
                   size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 shadow-lg shadow-primary/30"
+                  className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-lg px-8 shadow-lg shadow-[#efc64e]/30 border-0"
                   data-testid="button-hero-primary"
                 >
                   {slide.ctaPrimary.text}
@@ -122,7 +122,7 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
               <Link href={slide.ctaPrimary.href || "/"}>
                 <Button
                   size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 shadow-lg shadow-primary/30"
+                  className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-lg px-8 shadow-lg shadow-[#efc64e]/30 border-0"
                   data-testid="button-hero-primary"
                 >
                   {slide.ctaPrimary.text}
