@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -24,6 +24,35 @@ function isAdminSubdomain(): boolean {
   return hostname.startsWith('admin.') || hostname === 'admin';
 }
 
+// Redirect to admin subdomain
+function RedirectToAdmin() {
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    
+    // Avoid redirect loop if already on admin
+    if (isAdminSubdomain()) return;
+
+    let newHostname = `admin.${hostname}`;
+    // Handle www
+    if (hostname.startsWith('www.')) {
+      newHostname = `admin.${hostname.slice(4)}`;
+    }
+    
+    // Map /admin/login -> /login, /admin/dashboard -> /dashboard
+    const path = window.location.pathname.replace(/^\/admin/, '') || '/';
+    
+    window.location.href = `${protocol}//${newHostname}${port}${path}`;
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-pulse">Redirecting to admin dashboard...</div>
+    </div>
+  );
+}
+
 // Public website routes
 function PublicRouter({ onConnectClick }: { onConnectClick: () => void }) {
   return (
@@ -34,9 +63,9 @@ function PublicRouter({ onConnectClick }: { onConnectClick: () => void }) {
       <Route path="/announcements" component={AnnouncementsPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/contact" component={ContactPage} />
-      {/* Keep admin routes accessible on main domain too for backwards compatibility */}
-      <Route path="/admin/login" component={AdminLoginPage} />
-      <Route path="/admin/dashboard" component={AdminDashboardPage} />
+      {/* Redirect legacy admin routes to subdomain */}
+      <Route path="/admin/login" component={RedirectToAdmin} />
+      <Route path="/admin/dashboard" component={RedirectToAdmin} />
       <Route component={NotFound} />
     </Switch>
   );
