@@ -56,6 +56,20 @@ interface Announcement {
   content?: string;
 }
 
+// Helper function to extract YouTube video ID
+function extractYouTubeVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
 export default function AdminDashboardPage() {
   const [, setLocation] = useLocation();
   const [adminEmail, setAdminEmail] = useState("");
@@ -479,6 +493,20 @@ export default function AdminDashboardPage() {
                         data-testid="input-sermon-youtube"
                       />
                     </div>
+                    {sermonForm.youtubeUrl && extractYouTubeVideoId(sermonForm.youtubeUrl) && (
+                      <div className="rounded-lg overflow-hidden border border-primary/20">
+                        <iframe
+                          width="100%"
+                          height="200"
+                          src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sermonForm.youtubeUrl)}`}
+                          title="YouTube video preview"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          data-testid="preview-youtube-video"
+                        />
+                      </div>
+                    )}
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-sm font-medium mb-1 block">Date</label>
