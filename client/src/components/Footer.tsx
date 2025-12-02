@@ -5,7 +5,7 @@ import logoImage from "@assets/OTPC-removebg-preview_1764645088059.png";
 
 export function Footer() {
   return (
-    <footer className="bg-gradient-to-b from-[#1e40af] via-[#1e3a8a] to-[#0c2340] backdrop-blur-md border-t border-[#3b82f6]/20 text-white">
+    <footer className="bg-gradient-to-br from-[#b5621b] via-[#efc64e] to-[#1e3a8a] backdrop-blur-md border-t border-[#efc64e]/20 text-white">
       <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <div className="lg:col-span-1">
