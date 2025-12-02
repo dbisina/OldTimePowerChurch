@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Sermon {
   id: string;
+  slug?: string;
   title: string;
   preacher: string;
   serviceDay: string;
@@ -65,7 +66,7 @@ const serviceDayFullNames: Record<string, string> = {
 };
 
 export default function SermonDetailPage() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const { toast } = useToast();
   const [outlineOpen, setOutlineOpen] = useState(true);
   const [scripturesOpen, setScripturesOpen] = useState(true);
@@ -79,15 +80,15 @@ export default function SermonDetailPage() {
   const [scriptureLoading, setScriptureLoading] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
       fetchSermon();
       fetchRelatedSermons();
     }
-  }, [id]);
+  }, [slug]);
 
   const fetchSermon = async () => {
     try {
-      const res = await fetch(`/api/sermons/${id}`);
+      const res = await fetch(`/api/sermons/${slug}`);
       if (res.ok) {
         const data = await res.json();
         setRawSermon(data);
@@ -134,7 +135,7 @@ export default function SermonDetailPage() {
       const res = await fetch("/api/sermons?limit=2");
       if (res.ok) {
         const data = await res.json();
-        setRelatedSermons(data.filter((s: any) => s.id !== id).slice(0, 2).map((s: any) => ({
+        setRelatedSermons(data.filter((s: any) => s.slug !== slug && s.id !== slug).slice(0, 2).map((s: any) => ({
           ...s,
           serviceDay: serviceDayMap[s.serviceDay] || s.serviceDay,
           date: new Date(s.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -528,7 +529,7 @@ export default function SermonDetailPage() {
               <CardContent className="space-y-3">
                 {relatedSermons.length > 0 ? (
                   relatedSermons.map((relSermon) => (
-                    <Link key={relSermon.id} href={`/sermons/${relSermon.id}`}>
+                    <Link key={relSermon.id} href={`/sermons/${relSermon.slug || relSermon.id}`}>
                       <div className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition-all cursor-pointer group border border-transparent hover:border-primary/20">
                         <div className="w-20 h-14 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                           <Play className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />

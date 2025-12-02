@@ -6,6 +6,7 @@ import { Link } from "wouter";
 
 interface Sermon {
   id: string;
+  slug?: string;
   title: string;
   preacher: string;
   serviceDay: string;
@@ -85,7 +86,7 @@ export function FeaturedSermons() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sermons.map((sermon) => (
-            <SermonCard key={sermon.id} {...sermon} excerpt={sermon.excerpt ?? ""} duration={sermon.duration ?? ""} />
+            <SermonCard key={sermon.id} {...sermon} slug={sermon.slug} excerpt={sermon.excerpt ?? ""} duration={sermon.duration ?? ""} />
           ))}
         </div>
       </div>

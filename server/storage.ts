@@ -20,6 +20,7 @@ export interface IStorage {
   
   // Sermon operations
   getSermon(id: string): Promise<Sermon | undefined>;
+  getSermonBySlug(slug: string): Promise<Sermon | undefined>;
   getAllSermons(): Promise<Sermon[]>;
   getFeaturedSermons(): Promise<Sermon[]>;
   getSermonsByServiceDay(serviceDay: string): Promise<Sermon[]>;
@@ -29,6 +30,7 @@ export interface IStorage {
   
   // Announcement operations
   getAnnouncement(id: string): Promise<Announcement | undefined>;
+  getAnnouncementBySlug(slug: string): Promise<Announcement | undefined>;
   getAllAnnouncements(): Promise<Announcement[]>;
   getActiveAnnouncements(): Promise<Announcement[]>;
   getPinnedAnnouncements(): Promise<Announcement[]>;
@@ -88,6 +90,11 @@ export class DatabaseStorage implements IStorage {
     return sermon;
   }
 
+  async getSermonBySlug(slug: string): Promise<Sermon | undefined> {
+    const [sermon] = await db.select().from(sermons).where(eq(sermons.slug, slug));
+    return sermon;
+  }
+
   async getAllSermons(): Promise<Sermon[]> {
     return db.select().from(sermons).orderBy(desc(sermons.date));
   }
@@ -121,6 +128,11 @@ export class DatabaseStorage implements IStorage {
   // Announcement operations
   async getAnnouncement(id: string): Promise<Announcement | undefined> {
     const [announcement] = await db.select().from(announcements).where(eq(announcements.id, id));
+    return announcement;
+  }
+
+  async getAnnouncementBySlug(slug: string): Promise<Announcement | undefined> {
+    const [announcement] = await db.select().from(announcements).where(eq(announcements.slug, slug));
     return announcement;
   }
 

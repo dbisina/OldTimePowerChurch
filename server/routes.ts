@@ -16,6 +16,18 @@ const pdf = require("pdf-parse");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
+/**
+ * Generate a URL-friendly slug from a title string
+ */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, hyphens with single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+}
+
 // Configure multer for memory storage (we don't save files, just extract text)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -211,9 +223,13 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/sermons/:id", async (req: Request, res: Response) => {
+  app.get("/api/sermons/:slug", async (req: Request, res: Response) => {
     try {
-      const sermon = await storage.getSermon(req.params.id);
+      // Try to find by slug first, then by ID for backwards compatibility
+      let sermon = await storage.getSermonBySlug(req.params.slug);
+      if (!sermon) {
+        sermon = await storage.getSermon(req.params.slug);
+      }
       if (!sermon) {
         return res.status(404).json({ error: "Sermon not found" });
       }
@@ -243,9 +259,13 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/announcements/:id", async (req: Request, res: Response) => {
+  app.get("/api/announcements/:slug", async (req: Request, res: Response) => {
     try {
-      const announcement = await storage.getAnnouncement(req.params.id);
+      // Try to find by slug first, then by ID for backwards compatibility
+      let announcement = await storage.getAnnouncementBySlug(req.params.slug);
+      if (!announcement) {
+        announcement = await storage.getAnnouncement(req.params.slug);
+      }
       if (!announcement) {
         return res.status(404).json({ error: "Announcement not found" });
       }
@@ -404,9 +424,21 @@ export async function registerRoutes(
   // Admin Sermons
   app.post("/api/admin/sermons", async (req: Request, res: Response) => {
     try {
+      // Generate slug from title
+      const baseSlug = slugify(req.body.title || 'sermon');
+      let slug = baseSlug;
+      let counter = 1;
+      
+      // Ensure unique slug
+      while (await storage.getSermonBySlug(slug)) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      
       // Convert date string to Date object
       const body = {
         ...req.body,
+        slug,
         date: req.body.date ? new Date(req.body.date) : new Date(),
       };
       
@@ -450,9 +482,21 @@ export async function registerRoutes(
   // Admin Announcements
   app.post("/api/admin/announcements", async (req: Request, res: Response) => {
     try {
+      // Generate slug from title
+      const baseSlug = slugify(req.body.title || 'announcement');
+      let slug = baseSlug;
+      let counter = 1;
+      
+      // Ensure unique slug
+      while (await storage.getAnnouncementBySlug(slug)) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      
       // Convert date strings to Date objects
       const body = {
         ...req.body,
+        slug,
         publishedAt: req.body.publishedAt ? new Date(req.body.publishedAt) : new Date(),
         expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
       };

@@ -18,15 +18,23 @@ import AdminLoginPage from "@/pages/admin-login";
 import AdminDashboardPage from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 
-function Router({ onConnectClick }: { onConnectClick: () => void }) {
+// Check if we're on the admin subdomain
+function isAdminSubdomain(): boolean {
+  const hostname = window.location.hostname;
+  return hostname.startsWith('admin.') || hostname === 'admin';
+}
+
+// Public website routes
+function PublicRouter({ onConnectClick }: { onConnectClick: () => void }) {
   return (
     <Switch>
       <Route path="/" component={() => <HomePage onConnectClick={onConnectClick} />} />
       <Route path="/sermons" component={SermonsPage} />
-      <Route path="/sermons/:id" component={SermonDetailPage} />
+      <Route path="/sermons/:slug" component={SermonDetailPage} />
       <Route path="/announcements" component={AnnouncementsPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/contact" component={ContactPage} />
+      {/* Keep admin routes accessible on main domain too for backwards compatibility */}
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin/dashboard" component={AdminDashboardPage} />
       <Route component={NotFound} />
@@ -34,21 +42,62 @@ function Router({ onConnectClick }: { onConnectClick: () => void }) {
   );
 }
 
+// Admin subdomain routes (admin.domain.com)
+function AdminRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={AdminLoginPage} />
+      <Route path="/login" component={AdminLoginPage} />
+      <Route path="/dashboard" component={AdminDashboardPage} />
+      <Route component={AdminLoginPage} />
+    </Switch>
+  );
+}
+
+// Public website layout with navbar and footer
+function PublicLayout({ children, onConnectClick }: { children: React.ReactNode; onConnectClick: () => void }) {
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  
+  return (
+    <>
+      <div className="min-h-screen flex flex-col">
+        <Navbar onConnectClick={() => setConnectModalOpen(true)} />
+        <div className="flex-1">
+          {children}
+        </div>
+        <Footer />
+      </div>
+      <ConnectModal open={connectModalOpen} onOpenChange={setConnectModalOpen} />
+    </>
+  );
+}
+
+// Admin layout (no navbar/footer - cleaner admin experience)
+function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen">
+      {children}
+    </div>
+  );
+}
+
 function App() {
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const isAdmin = isAdminSubdomain();
 
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
-          <div className="min-h-screen flex flex-col">
-            <Navbar onConnectClick={() => setConnectModalOpen(true)} />
-            <div className="flex-1">
-              <Router onConnectClick={() => setConnectModalOpen(true)} />
-            </div>
-            <Footer />
-          </div>
-          <ConnectModal open={connectModalOpen} onOpenChange={setConnectModalOpen} />
+          {isAdmin ? (
+            <AdminLayout>
+              <AdminRouter />
+            </AdminLayout>
+          ) : (
+            <PublicLayout onConnectClick={() => setConnectModalOpen(true)}>
+              <PublicRouter onConnectClick={() => setConnectModalOpen(true)} />
+            </PublicLayout>
+          )}
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>

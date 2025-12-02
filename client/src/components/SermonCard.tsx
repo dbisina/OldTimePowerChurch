@@ -5,6 +5,7 @@ import { Link } from "wouter";
 
 interface SermonCardProps {
   id: string;
+  slug?: string;
   title: string;
   preacher: string;
   serviceDay: string;
@@ -17,6 +18,7 @@ interface SermonCardProps {
 
 export function SermonCard({
   id,
+  slug,
   title,
   preacher,
   serviceDay,
@@ -26,8 +28,11 @@ export function SermonCard({
   thumbnail,
   featured,
 }: SermonCardProps) {
+  // Use slug if available, fallback to id
+  const sermonPath = slug || id;
+  
   return (
-    <Link href={`/sermons/${id}`}>
+    <Link href={`/sermons/${sermonPath}`}>
       <Card
         className={`overflow-hidden group cursor-pointer transition-all duration-300 hover:translate-y-[-4px] hover:shadow-xl ${
           featured ? "ring-2 ring-[#efc64e]/50 shadow-lg shadow-[#efc64e]/20" : ""
