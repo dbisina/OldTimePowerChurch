@@ -1,150 +1,59 @@
-import { useEffect, useState } from "react";
-import { useLocation, Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BookOpen, Megaphone, Users, Settings } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
+import { ConnectModal } from "@/components/ConnectModal";
+import HomePage from "@/pages/home";
+import SermonsPage from "@/pages/sermons";
+import SermonDetailPage from "@/pages/sermon-detail";
+import AnnouncementsPage from "@/pages/announcements";
+import AboutPage from "@/pages/about";
+import ContactPage from "@/pages/contact";
+import AdminLoginPage from "@/pages/admin-login";
+import AdminDashboardPage from "@/pages/admin-dashboard";
+import NotFound from "@/pages/not-found";
 
-export default function AdminDashboardPage() {
-  const [, setLocation] = useLocation();
-  const [adminEmail, setAdminEmail] = useState("");
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const email = localStorage.getItem("adminEmail");
-
-    if (!token) {
-      setLocation("/admin/login");
-      return;
-    }
-
-    setAdminEmail(email || "");
-  }, [setLocation]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    toast({ title: "Logged out successfully" });
-    setLocation("/");
-  };
-
+function Router({ onConnectClick }: { onConnectClick: () => void }) {
   return (
-    <main className="min-h-screen pt-20 pb-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="font-serif text-4xl font-bold bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent mb-2">
-              Admin Dashboard
-            </h1>
-            <p className="text-muted-foreground">Logged in as {adminEmail}</p>
-          </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-primary/20"
-            data-testid="button-admin-logout"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-
-        <Tabs defaultValue="sermons" className="w-full">
-          <TabsList className="w-full md:w-auto bg-background/50 backdrop-blur-sm border border-primary/20 p-1 mb-8">
-            <TabsTrigger
-              value="sermons"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-sermons"
-            >
-              <BookOpen className="h-4 w-4" />
-              Sermons
-            </TabsTrigger>
-            <TabsTrigger
-              value="announcements"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-announcements"
-            >
-              <Megaphone className="h-4 w-4" />
-              Announcements
-            </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-users"
-            >
-              <Users className="h-4 w-4" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger
-              value="settings"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#b5621b] data-[state=active]:to-[#efc64e] data-[state=active]:text-white"
-              data-testid="tab-admin-settings"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="sermons" className="mt-0 space-y-4">
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle>Sermon Management</CardTitle>
-                <CardDescription>Add, edit, and manage sermons</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Sermon management system coming soon...</p>
-                <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                  Add New Sermon
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="announcements" className="mt-0 space-y-4">
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle>Announcement Management</CardTitle>
-                <CardDescription>Create and manage church announcements</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Announcement management system coming soon...</p>
-                <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                  Create Announcement
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="users" className="mt-0 space-y-4">
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage admin users and permissions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">User management system coming soon...</p>
-                <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                  Add User
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="mt-0 space-y-4">
-            <Card className="bg-background/50 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle>Site Settings</CardTitle>
-                <CardDescription>Configure church site settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Settings management coming soon...</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </main>
+    <Switch>
+      <Route path="/" component={() => <HomePage onConnectClick={onConnectClick} />} />
+      <Route path="/sermons" component={SermonsPage} />
+      <Route path="/sermons/:id" component={SermonDetailPage} />
+      <Route path="/announcements" component={AnnouncementsPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/admin/login" component={AdminLoginPage} />
+      <Route path="/admin/dashboard" component={AdminDashboardPage} />
+      <Route component={NotFound} />
+    </Switch>
   );
 }
+
+function App() {
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <TooltipProvider>
+          <div className="min-h-screen flex flex-col">
+            <Navbar onConnectClick={() => setConnectModalOpen(true)} />
+            <div className="flex-1">
+              <Router onConnectClick={() => setConnectModalOpen(true)} />
+            </div>
+            <Footer />
+          </div>
+          <ConnectModal open={connectModalOpen} onOpenChange={setConnectModalOpen} />
+          <Toaster />
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
