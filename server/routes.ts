@@ -8,7 +8,7 @@ import multer from "multer";
 import mammoth from "mammoth";
 import { v2 as cloudinary } from "cloudinary";
 // @ts-ignore - pdf-parse is a CommonJS module
-import pdf from "pdf-parse/lib/pdf-parse.js";
+import pdf from "pdf-parse";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
