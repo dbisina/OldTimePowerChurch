@@ -6,12 +6,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import mammoth from "mammoth";
-import { createRequire } from "module";
 import { v2 as cloudinary } from "cloudinary";
-
-// Use require for CommonJS pdf-parse module
-const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+// @ts-ignore - pdf-parse is a CommonJS module
+import pdf from "pdf-parse/lib/pdf-parse.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
