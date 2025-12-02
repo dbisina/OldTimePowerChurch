@@ -64,10 +64,12 @@ export function Navbar({ onConnectClick }: NavbarProps) {
           {navItems.map((item) => (
             <Link key={item.href} href={item.href}>
               <Button
-                variant={location === item.href ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
                 className={`transition-all duration-300 ${
-                  scrolled && location !== item.href
+                  location === item.href
+                    ? "bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white hover:opacity-90"
+                    : scrolled 
                     ? "hover:bg-primary/10 hover:text-primary"
                     : ""
                 }`}
