@@ -41,7 +41,9 @@ interface Sermon {
   title: string;
   preacher: string;
   date: string;
-  duration: string;
+  youtubeUrl: string;
+  startTime: string;
+  endTime: string;
   views: number;
 }
 
@@ -65,7 +67,9 @@ export default function AdminDashboardPage() {
       title: "The Power of Persistent Prayer",
       preacher: "Pastor John",
       date: "Nov 24, 2024",
-      duration: "45:30",
+      youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      startTime: "0:15",
+      endTime: "45:30",
       views: 1240,
     },
     {
@@ -73,7 +77,9 @@ export default function AdminDashboardPage() {
       title: "Walking in the Spirit",
       preacher: "Pastor John",
       date: "Nov 22, 2024",
-      duration: "38:15",
+      youtubeUrl: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+      startTime: "2:30",
+      endTime: "38:15",
       views: 892,
     },
     {
@@ -81,7 +87,9 @@ export default function AdminDashboardPage() {
       title: "Understanding the Book of Romans",
       preacher: "Elder James",
       date: "Nov 19, 2024",
-      duration: "52:00",
+      youtubeUrl: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+      startTime: "0:00",
+      endTime: "52:00",
       views: 756,
     },
   ]);
@@ -125,7 +133,9 @@ export default function AdminDashboardPage() {
     title: "",
     preacher: "",
     date: "",
-    duration: "",
+    youtubeUrl: "",
+    startTime: "",
+    endTime: "",
     views: "0",
   });
 
@@ -161,7 +171,7 @@ export default function AdminDashboardPage() {
   // Sermon handlers
   const openAddSermonDialog = () => {
     setEditingSermon(null);
-    setSermonForm({ title: "", preacher: "", date: "", duration: "", views: "0" });
+    setSermonForm({ title: "", preacher: "", date: "", youtubeUrl: "", startTime: "", endTime: "", views: "0" });
     setSermonDialogOpen(true);
   };
 
@@ -171,14 +181,16 @@ export default function AdminDashboardPage() {
       title: sermon.title,
       preacher: sermon.preacher,
       date: sermon.date,
-      duration: sermon.duration,
+      youtubeUrl: sermon.youtubeUrl,
+      startTime: sermon.startTime,
+      endTime: sermon.endTime,
       views: sermon.views.toString(),
     });
     setSermonDialogOpen(true);
   };
 
   const handleSaveSermon = () => {
-    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date || !sermonForm.duration) {
+    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date || !sermonForm.youtubeUrl || !sermonForm.startTime || !sermonForm.endTime) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
       return;
     }
@@ -192,7 +204,9 @@ export default function AdminDashboardPage() {
                 title: sermonForm.title,
                 preacher: sermonForm.preacher,
                 date: sermonForm.date,
-                duration: sermonForm.duration,
+                youtubeUrl: sermonForm.youtubeUrl,
+                startTime: sermonForm.startTime,
+                endTime: sermonForm.endTime,
                 views: parseInt(sermonForm.views) || s.views,
               }
             : s
@@ -205,7 +219,9 @@ export default function AdminDashboardPage() {
         title: sermonForm.title,
         preacher: sermonForm.preacher,
         date: sermonForm.date,
-        duration: sermonForm.duration,
+        youtubeUrl: sermonForm.youtubeUrl,
+        startTime: sermonForm.startTime,
+        endTime: sermonForm.endTime,
         views: parseInt(sermonForm.views) || 0,
       };
       setSermons([newSermon, ...sermons]);
@@ -453,7 +469,17 @@ export default function AdminDashboardPage() {
                         data-testid="input-sermon-preacher"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">YouTube URL</label>
+                      <Input
+                        value={sermonForm.youtubeUrl}
+                        onChange={(e) => setSermonForm({ ...sermonForm, youtubeUrl: e.target.value })}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="bg-background/50 border-primary/20"
+                        data-testid="input-sermon-youtube"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-sm font-medium mb-1 block">Date</label>
                         <Input
@@ -465,13 +491,23 @@ export default function AdminDashboardPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-1 block">Duration</label>
+                        <label className="text-sm font-medium mb-1 block">Start Time</label>
                         <Input
-                          value={sermonForm.duration}
-                          onChange={(e) => setSermonForm({ ...sermonForm, duration: e.target.value })}
+                          value={sermonForm.startTime}
+                          onChange={(e) => setSermonForm({ ...sermonForm, startTime: e.target.value })}
+                          placeholder="0:00"
+                          className="bg-background/50 border-primary/20"
+                          data-testid="input-sermon-start-time"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">End Time</label>
+                        <Input
+                          value={sermonForm.endTime}
+                          onChange={(e) => setSermonForm({ ...sermonForm, endTime: e.target.value })}
                           placeholder="45:30"
                           className="bg-background/50 border-primary/20"
-                          data-testid="input-sermon-duration"
+                          data-testid="input-sermon-end-time"
                         />
                       </div>
                     </div>
@@ -516,7 +552,8 @@ export default function AdminDashboardPage() {
                       <TableHead>Title</TableHead>
                       <TableHead>Preacher</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Duration</TableHead>
+                      <TableHead>Time Range</TableHead>
+                      <TableHead>YouTube</TableHead>
                       <TableHead>Views</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -527,7 +564,20 @@ export default function AdminDashboardPage() {
                         <TableCell className="font-medium">{sermon.title}</TableCell>
                         <TableCell>{sermon.preacher}</TableCell>
                         <TableCell>{sermon.date}</TableCell>
-                        <TableCell>{sermon.duration}</TableCell>
+                        <TableCell className="text-sm">
+                          {sermon.startTime} - {sermon.endTime}
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            href={sermon.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm truncate max-w-xs"
+                            data-testid={`link-youtube-${sermon.id}`}
+                          >
+                            Watch Video
+                          </a>
+                        </TableCell>
                         <TableCell>
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-sm">
                             <Eye className="h-3 w-3" />
