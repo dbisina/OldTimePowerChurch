@@ -13,6 +13,14 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   LogOut,
   BookOpen,
   Megaphone,
@@ -24,6 +32,7 @@ import {
   BarChart3,
   Eye,
   Download,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,11 +51,14 @@ interface Announcement {
   type: "text" | "graphic";
   date: string;
   status: "active" | "scheduled" | "archived";
+  content?: string;
 }
 
 export default function AdminDashboardPage() {
   const [, setLocation] = useLocation();
   const [adminEmail, setAdminEmail] = useState("");
+  
+  // State for sermons
   const [sermons, setSermons] = useState<Sermon[]>([
     {
       id: "1",
@@ -74,6 +86,7 @@ export default function AdminDashboardPage() {
     },
   ]);
 
+  // State for announcements
   const [announcements, setAnnouncements] = useState<Announcement[]>([
     {
       id: "1",
@@ -81,6 +94,7 @@ export default function AdminDashboardPage() {
       type: "text",
       date: "Nov 20, 2024",
       status: "active",
+      content: "Join us for our holiday services",
     },
     {
       id: "2",
@@ -88,6 +102,7 @@ export default function AdminDashboardPage() {
       type: "graphic",
       date: "Nov 18, 2024",
       status: "active",
+      content: "Special prayer meeting this week",
     },
     {
       id: "3",
@@ -95,8 +110,32 @@ export default function AdminDashboardPage() {
       type: "graphic",
       date: "Nov 15, 2024",
       status: "archived",
+      content: "Thanksgiving celebration event",
     },
   ]);
+
+  // Dialog states
+  const [sermonDialogOpen, setSermonDialogOpen] = useState(false);
+  const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+  const [editingSermon, setEditingSermon] = useState<Sermon | null>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+
+  // Form states
+  const [sermonForm, setSermonForm] = useState({
+    title: "",
+    preacher: "",
+    date: "",
+    duration: "",
+    views: "0",
+  });
+
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: "",
+    content: "",
+    type: "text" as "text" | "graphic",
+    date: "",
+    status: "active" as "active" | "scheduled" | "archived",
+  });
 
   const { toast } = useToast();
 
@@ -119,9 +158,123 @@ export default function AdminDashboardPage() {
     setLocation("/");
   };
 
+  // Sermon handlers
+  const openAddSermonDialog = () => {
+    setEditingSermon(null);
+    setSermonForm({ title: "", preacher: "", date: "", duration: "", views: "0" });
+    setSermonDialogOpen(true);
+  };
+
+  const openEditSermonDialog = (sermon: Sermon) => {
+    setEditingSermon(sermon);
+    setSermonForm({
+      title: sermon.title,
+      preacher: sermon.preacher,
+      date: sermon.date,
+      duration: sermon.duration,
+      views: sermon.views.toString(),
+    });
+    setSermonDialogOpen(true);
+  };
+
+  const handleSaveSermon = () => {
+    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date || !sermonForm.duration) {
+      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      return;
+    }
+
+    if (editingSermon) {
+      setSermons(
+        sermons.map((s) =>
+          s.id === editingSermon.id
+            ? {
+                ...s,
+                title: sermonForm.title,
+                preacher: sermonForm.preacher,
+                date: sermonForm.date,
+                duration: sermonForm.duration,
+                views: parseInt(sermonForm.views) || s.views,
+              }
+            : s
+        )
+      );
+      toast({ title: "Success", description: "Sermon updated successfully" });
+    } else {
+      const newSermon: Sermon = {
+        id: Date.now().toString(),
+        title: sermonForm.title,
+        preacher: sermonForm.preacher,
+        date: sermonForm.date,
+        duration: sermonForm.duration,
+        views: parseInt(sermonForm.views) || 0,
+      };
+      setSermons([newSermon, ...sermons]);
+      toast({ title: "Success", description: "Sermon added successfully" });
+    }
+
+    setSermonDialogOpen(false);
+  };
+
   const handleDeleteSermon = (id: string) => {
     setSermons(sermons.filter((s) => s.id !== id));
     toast({ title: "Sermon deleted successfully" });
+  };
+
+  // Announcement handlers
+  const openAddAnnouncementDialog = () => {
+    setEditingAnnouncement(null);
+    setAnnouncementForm({ title: "", content: "", type: "text", date: "", status: "active" });
+    setAnnouncementDialogOpen(true);
+  };
+
+  const openEditAnnouncementDialog = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
+    setAnnouncementForm({
+      title: announcement.title,
+      content: announcement.content || "",
+      type: announcement.type,
+      date: announcement.date,
+      status: announcement.status,
+    });
+    setAnnouncementDialogOpen(true);
+  };
+
+  const handleSaveAnnouncement = () => {
+    if (!announcementForm.title || !announcementForm.date) {
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+
+    if (editingAnnouncement) {
+      setAnnouncements(
+        announcements.map((a) =>
+          a.id === editingAnnouncement.id
+            ? {
+                ...a,
+                title: announcementForm.title,
+                content: announcementForm.content,
+                type: announcementForm.type,
+                date: announcementForm.date,
+                status: announcementForm.status,
+              }
+            : a
+        )
+      );
+      toast({ title: "Success", description: "Announcement updated successfully" });
+    } else {
+      const newAnnouncement: Announcement = {
+        id: Date.now().toString(),
+        title: announcementForm.title,
+        content: announcementForm.content,
+        type: announcementForm.type,
+        date: announcementForm.date,
+        status: announcementForm.status,
+      };
+      setAnnouncements([newAnnouncement, ...announcements]);
+      toast({ title: "Success", description: "Announcement created successfully" });
+    }
+
+    setAnnouncementDialogOpen(false);
   };
 
   const handleDeleteAnnouncement = (id: string) => {
@@ -130,7 +283,7 @@ export default function AdminDashboardPage() {
   };
 
   const totalViews = sermons.reduce((sum, s) => sum + s.views, 0);
-  const avgViews = Math.round(totalViews / sermons.length);
+  const avgViews = sermons.length > 0 ? Math.round(totalViews / sermons.length) : 0;
 
   return (
     <main className="min-h-screen pt-20 pb-12 bg-background">
@@ -261,10 +414,98 @@ export default function AdminDashboardPage() {
                 <h2 className="text-2xl font-bold">Sermon Management</h2>
                 <p className="text-muted-foreground">Manage your sermon library</p>
               </div>
-              <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Sermon
-              </Button>
+              <Dialog open={sermonDialogOpen} onOpenChange={setSermonDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                    onClick={openAddSermonDialog}
+                    data-testid="button-add-sermon"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Sermon
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-background/95 backdrop-blur-sm border-primary/20">
+                  <DialogHeader>
+                    <DialogTitle>{editingSermon ? "Edit Sermon" : "Add New Sermon"}</DialogTitle>
+                    <DialogDescription>
+                      {editingSermon ? "Update sermon details" : "Create a new sermon entry"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Title</label>
+                      <Input
+                        value={sermonForm.title}
+                        onChange={(e) => setSermonForm({ ...sermonForm, title: e.target.value })}
+                        placeholder="Sermon title"
+                        className="bg-background/50 border-primary/20"
+                        data-testid="input-sermon-title"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Preacher</label>
+                      <Input
+                        value={sermonForm.preacher}
+                        onChange={(e) => setSermonForm({ ...sermonForm, preacher: e.target.value })}
+                        placeholder="Preacher name"
+                        className="bg-background/50 border-primary/20"
+                        data-testid="input-sermon-preacher"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Date</label>
+                        <Input
+                          value={sermonForm.date}
+                          onChange={(e) => setSermonForm({ ...sermonForm, date: e.target.value })}
+                          placeholder="Nov 24, 2024"
+                          className="bg-background/50 border-primary/20"
+                          data-testid="input-sermon-date"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Duration</label>
+                        <Input
+                          value={sermonForm.duration}
+                          onChange={(e) => setSermonForm({ ...sermonForm, duration: e.target.value })}
+                          placeholder="45:30"
+                          className="bg-background/50 border-primary/20"
+                          data-testid="input-sermon-duration"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Views</label>
+                      <Input
+                        type="number"
+                        value={sermonForm.views}
+                        onChange={(e) => setSermonForm({ ...sermonForm, views: e.target.value })}
+                        placeholder="0"
+                        className="bg-background/50 border-primary/20"
+                        data-testid="input-sermon-views"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        onClick={handleSaveSermon}
+                        className="flex-1 bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                        data-testid="button-save-sermon"
+                      >
+                        {editingSermon ? "Update" : "Add"} Sermon
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setSermonDialogOpen(false)}
+                        className="border-primary/20"
+                        data-testid="button-cancel-sermon"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <Card className="bg-background/50 backdrop-blur-sm border-primary/20 overflow-hidden">
@@ -299,6 +540,7 @@ export default function AdminDashboardPage() {
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8"
+                              onClick={() => openEditSermonDialog(sermon)}
                               data-testid={`button-edit-sermon-${sermon.id}`}
                             >
                               <Edit2 className="h-4 w-4" />
@@ -329,17 +571,129 @@ export default function AdminDashboardPage() {
                 <h2 className="text-2xl font-bold">Announcement Management</h2>
                 <p className="text-muted-foreground">Create and manage church announcements</p>
               </div>
-              <Button className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
-                <Plus className="h-4 w-4 mr-2" />
-                New Announcement
-              </Button>
+              <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                    onClick={openAddAnnouncementDialog}
+                    data-testid="button-add-announcement"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Announcement
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-background/95 backdrop-blur-sm border-primary/20 max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingAnnouncement ? "Edit Announcement" : "Create New Announcement"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingAnnouncement ? "Update announcement details" : "Create a new church announcement"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Title</label>
+                      <Input
+                        value={announcementForm.title}
+                        onChange={(e) =>
+                          setAnnouncementForm({ ...announcementForm, title: e.target.value })
+                        }
+                        placeholder="Announcement title"
+                        className="bg-background/50 border-primary/20"
+                        data-testid="input-announcement-title"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Content</label>
+                      <textarea
+                        value={announcementForm.content}
+                        onChange={(e) =>
+                          setAnnouncementForm({ ...announcementForm, content: e.target.value })
+                        }
+                        placeholder="Announcement content..."
+                        className="w-full p-2 rounded-md bg-background/50 border border-primary/20 text-sm"
+                        rows={4}
+                        data-testid="input-announcement-content"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Type</label>
+                        <select
+                          value={announcementForm.type}
+                          onChange={(e) =>
+                            setAnnouncementForm({
+                              ...announcementForm,
+                              type: e.target.value as "text" | "graphic",
+                            })
+                          }
+                          className="w-full p-2 rounded-md bg-background/50 border border-primary/20 text-sm"
+                          data-testid="select-announcement-type"
+                        >
+                          <option value="text">Text Only</option>
+                          <option value="graphic">Graphic</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Status</label>
+                        <select
+                          value={announcementForm.status}
+                          onChange={(e) =>
+                            setAnnouncementForm({
+                              ...announcementForm,
+                              status: e.target.value as "active" | "scheduled" | "archived",
+                            })
+                          }
+                          className="w-full p-2 rounded-md bg-background/50 border border-primary/20 text-sm"
+                          data-testid="select-announcement-status"
+                        >
+                          <option value="active">Active</option>
+                          <option value="scheduled">Scheduled</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Date</label>
+                      <Input
+                        value={announcementForm.date}
+                        onChange={(e) =>
+                          setAnnouncementForm({ ...announcementForm, date: e.target.value })
+                        }
+                        placeholder="Nov 20, 2024"
+                        className="bg-background/50 border-primary/20"
+                        data-testid="input-announcement-date"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        onClick={handleSaveAnnouncement}
+                        className="flex-1 bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                        data-testid="button-save-announcement"
+                      >
+                        {editingAnnouncement ? "Update" : "Create"} Announcement
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAnnouncementDialogOpen(false)}
+                        className="border-primary/20"
+                        data-testid="button-cancel-announcement"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {announcements.map((announcement) => (
                 <Card
                   key={announcement.id}
-                  className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all"
+                  className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all flex flex-col"
+                  data-testid={`card-announcement-admin-${announcement.id}`}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
@@ -350,7 +704,7 @@ export default function AdminDashboardPage() {
                         </CardDescription>
                       </div>
                       <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                           announcement.status === "active"
                             ? "bg-green-500/20 text-green-700 dark:text-green-400"
                             : announcement.status === "scheduled"
@@ -362,13 +716,17 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">{announcement.date}</p>
+                  <CardContent className="flex-1 flex flex-col">
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
+                      {announcement.content}
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-4">{announcement.date}</p>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         className="flex-1 border-primary/20"
+                        onClick={() => openEditAnnouncementDialog(announcement)}
                         data-testid={`button-edit-announcement-${announcement.id}`}
                       >
                         <Edit2 className="h-3 w-3 mr-1" />
