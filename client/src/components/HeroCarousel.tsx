@@ -92,39 +92,39 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
         </div>
       ))}
 
-      <div className="relative h-full flex items-center justify-center px-4">
-        <div className="max-w-4xl text-center space-y-6">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight drop-shadow-lg bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
+      <div className="relative h-full flex items-center justify-center px-4 pt-16 md:pt-0">
+        <div className="max-w-4xl text-center space-y-4 md:space-y-6">
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight drop-shadow-lg bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent px-2">
             {slide.headline}
           </h2>
-          <p className="text-xl md:text-2xl text-foreground/90 max-w-2xl mx-auto">
+          <p className="text-lg md:text-2xl text-foreground/90 max-w-2xl mx-auto px-4">
             {slide.subheadline}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center pt-4 px-4">
             {slide.ctaPrimary.action === "openConnect" ? (
               <Button
                 onClick={onConnectClick}
                 size="lg"
-                className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-lg px-8 shadow-lg shadow-[#efc64e]/30 border-0"
+                className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-base md:text-lg px-6 md:px-8 shadow-lg shadow-[#efc64e]/30 border-0 w-full sm:w-auto"
                 data-testid="button-hero-primary"
               >
                 {slide.ctaPrimary.text}
               </Button>
             ) : slide.ctaPrimary.href?.startsWith("#") ? (
-              <a href={slide.ctaPrimary.href}>
+              <a href={slide.ctaPrimary.href} className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-lg px-8 shadow-lg shadow-[#efc64e]/30 border-0"
+                  className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-base md:text-lg px-6 md:px-8 shadow-lg shadow-[#efc64e]/30 border-0 w-full"
                   data-testid="button-hero-primary"
                 >
                   {slide.ctaPrimary.text}
                 </Button>
               </a>
             ) : (
-              <Link href={slide.ctaPrimary.href || "/"}>
+              <Link href={slide.ctaPrimary.href || "/"} className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-lg px-8 shadow-lg shadow-[#efc64e]/30 border-0"
+                  className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white text-base md:text-lg px-6 md:px-8 shadow-lg shadow-[#efc64e]/30 border-0 w-full"
                   data-testid="button-hero-primary"
                 >
                   {slide.ctaPrimary.text}
@@ -132,11 +132,11 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
               </Link>
             )}
             {slide.ctaSecondary && (
-              <Link href={slide.ctaSecondary.href || "/"}>
+              <Link href={slide.ctaSecondary.href || "/"} className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-background/20 backdrop-blur-sm border-primary/30 text-foreground hover:bg-primary/10 text-lg px-8"
+                  className="bg-background/20 backdrop-blur-sm border-primary/30 text-foreground hover:bg-primary/10 text-base md:text-lg px-6 md:px-8 w-full"
                   data-testid="button-hero-secondary"
                 >
                   {slide.ctaSecondary.text}
@@ -149,19 +149,19 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
 
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/20 backdrop-blur-sm border border-primary/20 rounded-lg p-3 hover:bg-primary/20 transition-all"
+        className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/20 backdrop-blur-sm border border-primary/20 rounded-lg p-2 md:p-3 hover:bg-primary/20 transition-all hidden md:block"
         aria-label="Previous slide"
         data-testid="button-carousel-prev"
       >
-        <ChevronLeft className="w-6 h-6 text-primary" />
+        <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-primary" />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/20 backdrop-blur-sm border border-primary/20 rounded-lg p-3 hover:bg-primary/20 transition-all"
+        className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/20 backdrop-blur-sm border border-primary/20 rounded-lg p-2 md:p-3 hover:bg-primary/20 transition-all hidden md:block"
         aria-label="Next slide"
         data-testid="button-carousel-next"
       >
-        <ChevronRight className="w-6 h-6 text-primary" />
+        <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-primary" />
       </button>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">

@@ -45,12 +45,12 @@ export function Navbar({ onConnectClick }: NavbarProps) {
         WebkitBackdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
       }}
     >
-      <nav className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2 group" data-testid="link-home-logo">
-          <div className={`transition-all duration-300 ${scrolled ? "scale-90" : "scale-100"}`}>
-            <img src="/images/OTPC-removebg-preview.png" alt="Old Time Power Church" className="h-12 w-12 object-contain" />
+      <nav className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-2 md:gap-4">
+        <Link href="/" className="flex items-center gap-2 group min-w-0" data-testid="link-home-logo">
+          <div className={`transition-all duration-300 flex-shrink-0 ${scrolled ? "scale-90" : "scale-100"}`}>
+            <img src="/images/OTPC-removebg-preview.png" alt="Old Time Power Church" className="h-10 w-10 md:h-12 md:w-12 object-contain" />
           </div>
-          <span className={`font-serif font-bold text-lg hidden sm:block transition-all duration-300 ${
+          <span className={`font-serif font-bold text-lg hidden sm:block truncate transition-all duration-300 ${
             scrolled 
               ? "bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent" 
               : "text-foreground"
@@ -59,7 +59,7 @@ export function Navbar({ onConnectClick }: NavbarProps) {
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1 flex-shrink-0">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href}>
               <Button
@@ -80,7 +80,7 @@ export function Navbar({ onConnectClick }: NavbarProps) {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <ThemeToggle />
           <Button
             onClick={onConnectClick}
