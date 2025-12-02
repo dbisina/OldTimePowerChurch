@@ -7,5 +7,3 @@ vite.config.ts.*
 .local
 .env
 client/public/images/uploads/
-.env
-.env*

@@ -15,11 +15,11 @@ const pdf = require("pdf-parse");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
-// Configure Cloudinary
+// Configure Cloudinary (credentials must be set in environment variables)
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dmqz2ravs",
-  api_key: process.env.CLOUDINARY_API_KEY || "229633849775699",
-  api_secret: process.env.CLOUDINARY_API_SECRET || "4wGvENs6suOgf4I3ls2in_yUmnk",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 /**
