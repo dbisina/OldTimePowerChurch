@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
     const userStr = localStorage.getItem("adminUser");
 
     if (!token) {
-      setLocation("/admin/login");
+      setLocation("/login");
       return;
     }
 
@@ -201,7 +201,7 @@ export default function AdminDashboardPage() {
       if (!res.ok) {
         localStorage.removeItem("adminToken");
         localStorage.removeItem("adminUser");
-        setLocation("/admin/login");
+        setLocation("/login");
         return;
       }
     }).catch(() => {

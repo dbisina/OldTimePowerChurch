@@ -33,6 +33,12 @@ export default function AdminLoginPage() {
       }
     };
     checkAdminExists();
+
+    // Auto-redirect if already logged in
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      setLocation("/dashboard");
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -52,7 +58,7 @@ export default function AdminLoginPage() {
         localStorage.setItem("adminToken", data.token);
         localStorage.setItem("adminUser", JSON.stringify(data.user));
         toast({ title: "Success", description: "Logged in successfully" });
-        setLocation("/admin/dashboard");
+        setLocation("/dashboard");
       } else {
         toast({
           title: "Error",
@@ -88,7 +94,7 @@ export default function AdminLoginPage() {
         localStorage.setItem("adminToken", data.token);
         localStorage.setItem("adminUser", JSON.stringify(data.user));
         toast({ title: "Success", description: "Admin account created successfully!" });
-        setLocation("/admin/dashboard");
+        setLocation("/dashboard");
       } else {
         toast({
           title: "Error",

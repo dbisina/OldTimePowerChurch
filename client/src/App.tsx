@@ -28,7 +28,6 @@ function isAdminSubdomain(): boolean {
 function RedirectToAdmin() {
   useEffect(() => {
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port}` : '';
     
     // Avoid redirect loop if already on admin
@@ -39,6 +38,9 @@ function RedirectToAdmin() {
     if (hostname.startsWith('www.')) {
       newHostname = `admin.${hostname.slice(4)}`;
     }
+    
+    // Force HTTPS for admin subdomain unless localhost
+    const protocol = hostname === 'localhost' ? 'http:' : 'https:';
     
     // Map /admin/login -> /login, /admin/dashboard -> /dashboard
     const path = window.location.pathname.replace(/^\/admin/, '') || '/';
