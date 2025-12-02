@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import heroSlide1 from "@assets/generated_images/golden_radial_glow_spiritual_background.png";
+import heroSlide1 from "@assets/generated_images/subtle_golden_radial_glow_background.png";
 import heroSlide2 from "@assets/generated_images/worship_prayer_blurred_silhouettes.png";
 import heroSlide3 from "@assets/generated_images/bible_with_dove_light_ray.png";
 import logoImage from "@assets/OTPC-removebg-preview_1764645088059.png";
@@ -86,8 +86,8 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
       ))}
 
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10 pointer-events-none">
-          <img src={logoImage} alt="" className="w-64 h-64 md:w-96 md:h-96" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <img src={logoImage} alt="" className="w-64 h-64 md:w-96 md:h-96 drop-shadow-2xl" />
         </div>
 
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
