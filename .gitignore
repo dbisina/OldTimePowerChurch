@@ -6,3 +6,6 @@ vite.config.ts.*
 *.tar.gz
 .local
 .env
+client/public/images/uploads/
+.env
+.env*

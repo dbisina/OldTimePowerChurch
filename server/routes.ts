@@ -7,14 +7,20 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import mammoth from "mammoth";
 import { createRequire } from "module";
-import fs from "fs";
-import path from "path";
+import { v2 as cloudinary } from "cloudinary";
 
 // Use require for CommonJS pdf-parse module
 const require = createRequire(import.meta.url);
 const pdf = require("pdf-parse");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dmqz2ravs",
+  api_key: process.env.CLOUDINARY_API_KEY || "229633849775699",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "4wGvENs6suOgf4I3ls2in_yUmnk",
+});
 
 /**
  * Generate a URL-friendly slug from a title string
@@ -48,26 +54,10 @@ const upload = multer({
   }
 });
 
-// Configure multer for image uploads - save to disk
-const uploadDir = path.join(process.cwd(), 'client', 'public', 'images', 'uploads');
-// Ensure upload directory exists
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
+// Configure multer for image uploads - use memory storage for Cloudinary
 const imageUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      // Generate unique filename with timestamp
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(file.originalname);
-      cb(null, `announcement-${uniqueSuffix}${ext}`);
-    }
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for images
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for images
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -400,20 +390,39 @@ export async function registerRoutes(
     }
   });
 
-  // Image upload endpoint (for announcement graphics)
+  // Image upload endpoint (for announcement graphics) - uploads to Cloudinary
   app.post("/api/upload-image", imageUpload.single('image'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No image uploaded" });
       }
       
-      // Return the public URL path
-      const imageUrl = `/images/uploads/${req.file.filename}`;
+      // Upload to Cloudinary
+      const result = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "otpc-announcements", // Organize in a folder
+            resource_type: "image",
+            transformation: [
+              { quality: "auto:good" }, // Automatic quality optimization
+              { fetch_format: "auto" }, // Automatic format selection (webp, etc.)
+            ],
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(req.file!.buffer);
+      });
       
       res.json({
-        url: imageUrl,
+        url: result.secure_url,
+        publicId: result.public_id,
         filename: req.file.originalname,
         size: req.file.size,
+        width: result.width,
+        height: result.height,
       });
     } catch (error) {
       console.error("Image upload error:", error);
