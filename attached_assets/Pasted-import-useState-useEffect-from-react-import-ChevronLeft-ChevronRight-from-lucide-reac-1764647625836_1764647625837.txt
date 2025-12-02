@@ -1,0 +1,174 @@
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import heroSlide1 from "@/assets/hero-slide-1.jpg";
+import heroSlide2 from "@/assets/hero-slide-2.jpg";
+import heroSlide3 from "@/assets/hero-slide-3.jpg";
+import logo from "@/assets/logo.png";
+
+interface Slide {
+  image: string;
+  headline: string;
+  subheadline: string;
+  ctaPrimary: { text: string; action: () => void };
+  ctaSecondary?: { text: string; action: () => void };
+}
+
+interface HeroCarouselProps {
+  onConnectClick: () => void;
+}
+
+export const HeroCarousel = ({ onConnectClick }: HeroCarouselProps) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const slides: Slide[] = [
+    {
+      image: heroSlide1,
+      headline: "Old Time Revival — Preparing the Way for the Lord",
+      subheadline: "Awake the church. Ignite revival. Encounter His presence.",
+      ctaPrimary: {
+        text: "Join a Service",
+        action: () => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" }),
+      },
+      ctaSecondary: {
+        text: "Watch Latest Sermon",
+        action: () => (window.location.href = "/sermons?featured=true"),
+      },
+    },
+    {
+      image: heroSlide2,
+      headline: "Saviour's Exaltation Service — Sundays 8:00 AM",
+      subheadline: "A time of praise, proclamation and revival",
+      ctaPrimary: {
+        text: "Plan Your Visit",
+        action: () => (window.location.href = "/contact"),
+      },
+    },
+    {
+      image: heroSlide3,
+      headline: "Preparing the way for the Lord",
+      subheadline: "Scripture-centred teaching, Spirit empowerment and community renewal",
+      ctaPrimary: {
+        text: "Subscribe for Sermons",
+        action: onConnectClick,
+      },
+    },
+  ];
+
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isPaused, slides.length]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  return (
+    <div
+      className="relative h-screen w-full overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      role="region"
+      aria-live="polite"
+      aria-label="Hero carousel"
+    >
+      {slides.map((slide, index) => (
+        <div
+          key={index}
+          className={`absolute inset-0 transition-opacity duration-1000 ${
+            index === currentSlide ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {/* Background Image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${slide.image})` }}
+          />
+          
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90" />
+          
+          {/* Radial Glow */}
+          <div className="absolute inset-0 radial-glow" />
+
+          {/* Logo Watermark */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10">
+            <img src={logo} alt="" className="w-96 h-96" />
+          </div>
+
+          {/* Content */}
+          <div className="relative h-full flex items-center justify-center px-4">
+            <div className="max-w-4xl text-center space-y-6 animate-fade-in">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary leading-tight glow-secondary">
+                {slide.headline}
+              </h2>
+              <p className="text-xl md:text-2xl text-foreground/90 max-w-2xl mx-auto">
+                {slide.subheadline}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <Button
+                  onClick={slide.ctaPrimary.action}
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 glow-primary hover-lift"
+                >
+                  {slide.ctaPrimary.text}
+                </Button>
+                {slide.ctaSecondary && (
+                  <Button
+                    onClick={slide.ctaSecondary.action}
+                    size="lg"
+                    variant="outline"
+                    className="glass border-primary/30 text-foreground hover:bg-primary/10 text-lg px-8 hover-lift"
+                  >
+                    {slide.ctaSecondary.text}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={prevSlide}
+        className="absolute left-4 top-1/2 -translate-y-1/2 glass-card p-3 hover:bg-primary/20 transition-smooth"
+        aria-label="Previous slide"
+      >
+        <ChevronLeft className="w-6 h-6 text-primary" />
+      </button>
+      <button
+        onClick={nextSlide}
+        className="absolute right-4 top-1/2 -translate-y-1/2 glass-card p-3 hover:bg-primary/20 transition-smooth"
+        aria-label="Next slide"
+      >
+        <ChevronRight className="w-6 h-6 text-primary" />
+      </button>
+
+      {/* Indicators */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentSlide(index)}
+            className={`h-2 rounded-full transition-all ${
+              index === currentSlide
+                ? "w-12 bg-primary glow-primary"
+                : "w-2 bg-primary/30 hover:bg-primary/50"
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
