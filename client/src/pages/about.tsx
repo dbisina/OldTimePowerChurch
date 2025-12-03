@@ -25,10 +25,15 @@ const coreBeliefs = [
 
 const teamMembers = [
   {
-    name: "Pastor John",
+    name: "Pastor John Bisina",
     role: "Senior Pastor",
     initials: "PJ",
   },
+  {
+    name: "Oluranti Rosemary Bisina",
+    role: "Women Coordinator",
+    intials: "ORB"
+  }
 ];
 
 export default function AboutPage() {
