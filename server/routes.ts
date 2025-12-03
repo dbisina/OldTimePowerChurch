@@ -1,7 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertSermonSchema, insertAnnouncementSchema, insertSubscriberSchema } from "@shared/schema";
+import {
+  insertSermonSchema,
+  insertAnnouncementSchema,
+  insertSubscriberSchema,
+  insertWorshipPrayerSchema
+} from "@shared/schema";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
@@ -9,6 +14,7 @@ import mammoth from "mammoth";
 import { v2 as cloudinary } from "cloudinary";
 // @ts-ignore - pdf-parse is a CommonJS module
 import pdf from "pdf-parse";
+import nodemailer from "nodemailer";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
@@ -17,6 +23,17 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Nodemailer
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || "587"),
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
 /**
@@ -41,9 +58,9 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
       'application/msword' // .doc (may not parse well)
     ];
-    if (allowedTypes.includes(file.mimetype) || 
-        file.originalname.endsWith('.docx') || 
-        file.originalname.endsWith('.pdf')) {
+    if (allowedTypes.includes(file.mimetype) ||
+      file.originalname.endsWith('.docx') ||
+      file.originalname.endsWith('.pdf')) {
       cb(null, true);
     } else {
       cb(new Error('Only PDF and DOCX files are allowed'));
@@ -69,11 +86,11 @@ const imageUpload = multer({
 function authenticateToken(req: Request, res: Response, next: Function) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (!token) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-  
+
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) {
       return res.status(403).json({ error: "Invalid token" });
@@ -88,35 +105,35 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // ==================== AUTH ROUTES ====================
-  
+
   // Login
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ error: "Email and password are required" });
       }
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
-      
+
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
-      
+
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
-      
+
       // Update last login
       await storage.updateUser(user.id, { lastLogin: new Date() } as any);
-      
+
       res.json({
         token,
         user: {
@@ -131,43 +148,43 @@ export async function registerRoutes(
       res.status(500).json({ error: "Login failed" });
     }
   });
-  
+
   // Register (initial admin setup - disable after first user)
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const { username, email, password, role = "admin" } = req.body;
-      
+
       if (!username || !email || !password) {
         return res.status(400).json({ error: "Username, email and password are required" });
       }
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ error: "User with this email already exists" });
       }
-      
+
       const existingUsername = await storage.getUserByUsername(username);
       if (existingUsername) {
         return res.status(400).json({ error: "Username already taken" });
       }
-      
+
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-      
+
       const user = await storage.createUser({
         username,
         email,
         password: hashedPassword,
         role,
       });
-      
+
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
-      
+
       res.status(201).json({
         token,
         user: {
@@ -182,20 +199,20 @@ export async function registerRoutes(
       res.status(500).json({ error: "Registration failed" });
     }
   });
-  
+
   // Verify token
   app.get("/api/auth/verify", authenticateToken, (req: Request, res: Response) => {
     res.json({ valid: true, user: (req as any).user });
   });
 
   // ==================== PUBLIC ROUTES ====================
-  
+
   // Sermons
   app.get("/api/sermons", async (req: Request, res: Response) => {
     try {
       const { featured, serviceDay } = req.query;
       let sermons;
-      
+
       if (featured === "true") {
         sermons = await storage.getFeaturedSermons();
       } else if (serviceDay) {
@@ -203,7 +220,7 @@ export async function registerRoutes(
       } else {
         sermons = await storage.getAllSermons();
       }
-      
+
       res.json(sermons);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch sermons" });
@@ -231,7 +248,7 @@ export async function registerRoutes(
     try {
       const { active, pinned } = req.query;
       let announcements;
-      
+
       if (active === "true") {
         announcements = await storage.getActiveAnnouncements();
       } else if (pinned === "true") {
@@ -239,7 +256,7 @@ export async function registerRoutes(
       } else {
         announcements = await storage.getAllAnnouncements();
       }
-      
+
       res.json(announcements);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch announcements" });
@@ -266,7 +283,7 @@ export async function registerRoutes(
   app.post("/api/subscribe", async (req: Request, res: Response) => {
     try {
       const { name, email, preferredServiceDay } = req.body;
-      
+
       // Check if already subscribed
       const existing = await storage.getSubscriberByEmail(email);
       if (existing) {
@@ -277,7 +294,7 @@ export async function registerRoutes(
         }
         return res.status(400).json({ error: "Email already subscribed" });
       }
-      
+
       const subscriber = await storage.createSubscriber({
         name,
         email,
@@ -286,7 +303,7 @@ export async function registerRoutes(
         status: "active",
         tags: ["newsletter"],
       });
-      
+
       res.status(201).json({ message: "Subscribed successfully", id: subscriber.id });
     } catch (error) {
       res.status(500).json({ error: "Failed to subscribe" });
@@ -294,7 +311,7 @@ export async function registerRoutes(
   });
 
   // ==================== ADMIN ROUTES ====================
-  
+
   // YouTube metadata endpoint
   app.get("/api/youtube/metadata", async (req: Request, res: Response) => {
     try {
@@ -302,7 +319,7 @@ export async function registerRoutes(
       if (!url || typeof url !== "string") {
         return res.status(400).json({ error: "URL is required" });
       }
-      
+
       // Extract video ID
       const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
@@ -316,21 +333,21 @@ export async function registerRoutes(
           break;
         }
       }
-      
+
       if (!videoId) {
         return res.status(400).json({ error: "Invalid YouTube URL" });
       }
-      
+
       // Fetch oEmbed data (no API key needed)
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
       const response = await fetch(oembedUrl);
-      
+
       if (!response.ok) {
         return res.status(404).json({ error: "Video not found" });
       }
-      
+
       const data = await response.json();
-      
+
       res.json({
         title: data.title || "",
         author: data.author_name || "",
@@ -342,18 +359,18 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to fetch video metadata" });
     }
   });
-  
+
   // Document text extraction endpoint (for sermon outlines)
   app.post("/api/extract-document", upload.single('document'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
-      
+
       const buffer = req.file.buffer;
       const filename = req.file.originalname.toLowerCase();
       let extractedText = "";
-      
+
       if (filename.endsWith('.docx')) {
         // Parse DOCX using mammoth
         const result = await mammoth.extractRawText({ buffer });
@@ -365,17 +382,17 @@ export async function registerRoutes(
       } else {
         return res.status(400).json({ error: "Unsupported file format. Please upload a DOCX or PDF file." });
       }
-      
+
       // Clean up the extracted text
       extractedText = extractedText
         .replace(/\r\n/g, '\n')  // Normalize line endings
         .replace(/\n{3,}/g, '\n\n')  // Remove excessive blank lines
         .trim();
-      
+
       if (!extractedText) {
         return res.status(400).json({ error: "Could not extract text from document. The file might be empty or corrupted." });
       }
-      
+
       res.json({
         text: extractedText,
         filename: req.file.originalname,
@@ -393,7 +410,7 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ error: "No image uploaded" });
       }
-      
+
       // Upload to Cloudinary
       const result = await new Promise<any>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -412,7 +429,7 @@ export async function registerRoutes(
         );
         uploadStream.end(req.file!.buffer);
       });
-      
+
       res.json({
         url: result.secure_url,
         publicId: result.public_id,
@@ -426,7 +443,7 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to upload image" });
     }
   });
-  
+
   // Admin Sermons
   app.post("/api/admin/sermons", async (req: Request, res: Response) => {
     try {
@@ -434,25 +451,48 @@ export async function registerRoutes(
       const baseSlug = slugify(req.body.title || 'sermon');
       let slug = baseSlug;
       let counter = 1;
-      
+
       // Ensure unique slug
       while (await storage.getSermonBySlug(slug)) {
         slug = `${baseSlug}-${counter}`;
         counter++;
       }
-      
+
       // Convert date string to Date object
       const body = {
         ...req.body,
         slug,
         date: req.body.date ? new Date(req.body.date) : new Date(),
       };
-      
+
+      // Fetch YouTube thumbnail if videoUrl is present and thumbnailUrl is missing
+      if (body.videoUrl && !body.thumbnailUrl) {
+        try {
+          const patterns = [
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+            /^([a-zA-Z0-9_-]{11})$/,
+          ];
+          let videoId: string | null = null;
+          for (const pattern of patterns) {
+            const match = body.videoUrl.match(pattern);
+            if (match) {
+              videoId = match[1];
+              break;
+            }
+          }
+          if (videoId) {
+            body.thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+          }
+        } catch (e) {
+          console.error("Failed to extract thumbnail", e);
+        }
+      }
+
       const result = insertSermonSchema.safeParse(body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid sermon data", details: result.error });
       }
-      
+
       const sermon = await storage.createSermon(result.data);
       res.status(201).json(sermon);
     } catch (error) {
@@ -463,7 +503,31 @@ export async function registerRoutes(
 
   app.put("/api/admin/sermons/:id", async (req: Request, res: Response) => {
     try {
-      const sermon = await storage.updateSermon(req.params.id, req.body);
+      const body = { ...req.body };
+      // Fetch YouTube thumbnail if videoUrl is present and thumbnailUrl is missing
+      if (body.videoUrl && !body.thumbnailUrl) {
+        try {
+          const patterns = [
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+            /^([a-zA-Z0-9_-]{11})$/,
+          ];
+          let videoId: string | null = null;
+          for (const pattern of patterns) {
+            const match = body.videoUrl.match(pattern);
+            if (match) {
+              videoId = match[1];
+              break;
+            }
+          }
+          if (videoId) {
+            body.thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+          }
+        } catch (e) {
+          console.error("Failed to extract thumbnail", e);
+        }
+      }
+
+      const sermon = await storage.updateSermon(req.params.id, body);
       if (!sermon) {
         return res.status(404).json({ error: "Sermon not found" });
       }
@@ -492,13 +556,13 @@ export async function registerRoutes(
       const baseSlug = slugify(req.body.title || 'announcement');
       let slug = baseSlug;
       let counter = 1;
-      
+
       // Ensure unique slug
       while (await storage.getAnnouncementBySlug(slug)) {
         slug = `${baseSlug}-${counter}`;
         counter++;
       }
-      
+
       // Convert date strings to Date objects
       const body = {
         ...req.body,
@@ -506,13 +570,40 @@ export async function registerRoutes(
         publishedAt: req.body.publishedAt ? new Date(req.body.publishedAt) : new Date(),
         expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
       };
-      
+
       const result = insertAnnouncementSchema.safeParse(body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid announcement data", details: result.error });
       }
-      
+
       const announcement = await storage.createAnnouncement(result.data);
+
+      // Send email if requested
+      if (req.body.sendEmail) {
+        const subscribers = await storage.getActiveSubscribers();
+        const emails = subscribers.map(s => s.email);
+
+        if (emails.length > 0) {
+          try {
+            await transporter.sendMail({
+              from: `"Old Time Power Church" <${process.env.SMTP_USER}>`,
+              to: process.env.SMTP_USER, // Send to self, bcc everyone else
+              bcc: emails,
+              subject: announcement.title,
+              html: `
+                <h1>${announcement.title}</h1>
+                ${announcement.graphicUrl ? `<img src="${announcement.graphicUrl}" alt="${announcement.title}" style="max-width: 100%;" />` : ''}
+                <div>${announcement.contentHtml || ''}</div>
+                <p><a href="${process.env.APP_URL}/announcements/${announcement.slug}">View on website</a></p>
+              `,
+            });
+          } catch (e) {
+            console.error("Failed to send email:", e);
+            // Don't fail the request if email fails
+          }
+        }
+      }
+
       res.status(201).json(announcement);
     } catch (error) {
       res.status(500).json({ error: "Failed to create announcement" });
@@ -527,7 +618,7 @@ export async function registerRoutes(
         publishedAt: req.body.publishedAt ? new Date(req.body.publishedAt) : undefined,
         expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
       };
-      
+
       const announcement = await storage.updateAnnouncement(req.params.id, body);
       if (!announcement) {
         return res.status(404).json({ error: "Announcement not found" });
@@ -554,7 +645,7 @@ export async function registerRoutes(
   app.get("/api/admin/subscribers", async (req: Request, res: Response) => {
     try {
       const { active } = req.query;
-      const subscribers = active === "true" 
+      const subscribers = active === "true"
         ? await storage.getActiveSubscribers()
         : await storage.getAllSubscribers();
       res.json(subscribers);
@@ -569,7 +660,7 @@ export async function registerRoutes(
       if (!result.success) {
         return res.status(400).json({ error: "Invalid subscriber data", details: result.error });
       }
-      
+
       const subscriber = await storage.createSubscriber(result.data);
       res.status(201).json(subscriber);
     } catch (error) {
@@ -621,14 +712,14 @@ export async function registerRoutes(
         storage.getAllAnnouncements(),
         storage.getAllSubscribers(),
       ]);
-      
+
       const now = new Date();
       const activeAnnouncements = announcements.filter(a => {
         const published = new Date(a.publishedAt) <= now;
         const notExpired = !a.expiresAt || new Date(a.expiresAt) > now;
         return published && notExpired;
       });
-      
+
       res.json({
         totalSermons: sermons.length,
         featuredSermons: sermons.filter(s => s.featured).length,
@@ -639,6 +730,58 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Worship/Prayer routes
+  app.get("/api/worship-prayer", async (req, res) => {
+    const category = req.query.category as string;
+    if (category) {
+      const items = await storage.getWorshipPrayerByCategory(category);
+      res.json(items);
+    } else {
+      const items = await storage.getAllWorshipPrayer();
+      res.json(items);
+    }
+  });
+
+  app.post("/api/admin/worship-prayer", async (req, res) => {
+    try {
+      const result = insertWorshipPrayerSchema.safeParse(req.body);
+      if (!result.success) {
+        res.status(400).json({ error: "Invalid input", details: result.error });
+        return;
+      }
+      const item = await storage.createWorshipPrayer(result.data);
+      res.status(201).json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create item" });
+    }
+  });
+
+  app.put("/api/admin/worship-prayer/:id", async (req, res) => {
+    try {
+      const item = await storage.updateWorshipPrayer(req.params.id, req.body);
+      if (!item) {
+        res.status(404).json({ error: "Item not found" });
+        return;
+      }
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update item" });
+    }
+  });
+
+  app.delete("/api/admin/worship-prayer/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteWorshipPrayer(req.params.id);
+      if (!success) {
+        res.status(404).json({ error: "Item not found" });
+        return;
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete item" });
     }
   });
 

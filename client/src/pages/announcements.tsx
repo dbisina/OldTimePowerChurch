@@ -94,7 +94,7 @@ export default function AnnouncementsPage() {
     <main className="min-h-screen py-8 md:py-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-10">
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">Announcements</h1>
+          <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4">Announcements</h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
             Stay updated with the latest news, events, and happenings at Old Time Power Church.
           </p>
@@ -146,6 +146,7 @@ export default function AnnouncementsPage() {
                 <AnnouncementCard 
                   key={announcement.id} 
                   {...announcement} 
+                  content={announcement.contentHtml || ""}
                   onClick={() => handleAnnouncementClick(announcement)}
                 />
               ))}
@@ -164,6 +165,7 @@ export default function AnnouncementsPage() {
                 <AnnouncementCard 
                   key={announcement.id} 
                   {...announcement} 
+                  content={announcement.contentHtml || ""}
                   onClick={() => handleAnnouncementClick(announcement)}
                 />
               ))}

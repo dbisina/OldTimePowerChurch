@@ -42,7 +42,8 @@ export const sermons = pgTable("sermons", {
   preacher: text("preacher").notNull(),
   serviceDay: text("service_day").notNull(), // sun, tue, fri
   date: timestamp("date").notNull(),
-  videoUrl: text("video_url").notNull(),
+  videoUrl: text("video_url"),
+  thumbnailUrl: text("thumbnail_url"),
   startSec: integer("start_sec").notNull().default(0),
   endSec: integer("end_sec"),
   excerpt: text("excerpt"),
@@ -126,3 +127,12 @@ export const worshipPrayer = pgTable("worship_prayer", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const insertWorshipPrayerSchema = createInsertSchema(worshipPrayer).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWorshipPrayer = z.infer<typeof insertWorshipPrayerSchema>;
+export type WorshipPrayer = typeof worshipPrayer.$inferSelect;

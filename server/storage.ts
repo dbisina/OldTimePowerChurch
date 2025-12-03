@@ -1,9 +1,10 @@
-import { 
+import {
   type User, type InsertUser,
   type Sermon, type InsertSermon,
   type Announcement, type InsertAnnouncement,
   type Subscriber, type InsertSubscriber,
-  users, sermons, announcements, subscribers
+  type WorshipPrayer, type InsertWorshipPrayer,
+  users, sermons, announcements, subscribers, worshipPrayer
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, lte, gt, or, isNull } from "drizzle-orm";
@@ -17,7 +18,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
-  
+
   // Sermon operations
   getSermon(id: string): Promise<Sermon | undefined>;
   getSermonBySlug(slug: string): Promise<Sermon | undefined>;
@@ -27,7 +28,7 @@ export interface IStorage {
   createSermon(sermon: InsertSermon): Promise<Sermon>;
   updateSermon(id: string, data: Partial<InsertSermon>): Promise<Sermon | undefined>;
   deleteSermon(id: string): Promise<boolean>;
-  
+
   // Announcement operations
   getAnnouncement(id: string): Promise<Announcement | undefined>;
   getAnnouncementBySlug(slug: string): Promise<Announcement | undefined>;
@@ -37,7 +38,7 @@ export interface IStorage {
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
   updateAnnouncement(id: string, data: Partial<InsertAnnouncement>): Promise<Announcement | undefined>;
   deleteAnnouncement(id: string): Promise<boolean>;
-  
+
   // Subscriber operations
   getSubscriber(id: string): Promise<Subscriber | undefined>;
   getSubscriberByEmail(email: string): Promise<Subscriber | undefined>;
@@ -46,6 +47,14 @@ export interface IStorage {
   createSubscriber(subscriber: InsertSubscriber): Promise<Subscriber>;
   updateSubscriber(id: string, data: Partial<InsertSubscriber>): Promise<Subscriber | undefined>;
   deleteSubscriber(id: string): Promise<boolean>;
+
+  // Worship/Prayer operations
+  getWorshipPrayer(id: string): Promise<WorshipPrayer | undefined>;
+  getAllWorshipPrayer(): Promise<WorshipPrayer[]>;
+  getWorshipPrayerByCategory(category: string): Promise<WorshipPrayer[]>;
+  createWorshipPrayer(item: InsertWorshipPrayer): Promise<WorshipPrayer>;
+  updateWorshipPrayer(id: string, data: Partial<InsertWorshipPrayer>): Promise<WorshipPrayer | undefined>;
+  deleteWorshipPrayer(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -80,8 +89,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id));
-    return (result.rowCount ?? 0) > 0;
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
   }
 
   // Sermon operations
@@ -121,8 +130,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSermon(id: string): Promise<boolean> {
-    const result = await db.delete(sermons).where(eq(sermons.id, id));
-    return (result.rowCount ?? 0) > 0;
+    const result = await db.delete(sermons).where(eq(sermons.id, id)).returning();
+    return result.length > 0;
   }
 
   // Announcement operations
@@ -175,8 +184,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAnnouncement(id: string): Promise<boolean> {
-    const result = await db.delete(announcements).where(eq(announcements.id, id));
-    return (result.rowCount ?? 0) > 0;
+    const result = await db.delete(announcements).where(eq(announcements.id, id)).returning();
+    return result.length > 0;
   }
 
   // Subscriber operations
@@ -207,7 +216,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateSubscriber(id: string, data: Partial<InsertSubscriber>): Promise<Subscriber | undefined> {
     const updateData: Partial<Subscriber> = { ...data };
-    
+
     // If unsubscribing, set the unsubscribedAt timestamp
     if (data.status === "unsubscribed") {
       const existing = await this.getSubscriber(id);
@@ -215,7 +224,7 @@ export class DatabaseStorage implements IStorage {
         updateData.unsubscribedAt = new Date();
       }
     }
-    
+
     const [subscriber] = await db.update(subscribers)
       .set(updateData)
       .where(eq(subscribers.id, id))
@@ -224,8 +233,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSubscriber(id: string): Promise<boolean> {
-    const result = await db.delete(subscribers).where(eq(subscribers.id, id));
-    return (result.rowCount ?? 0) > 0;
+    const result = await db.delete(subscribers).where(eq(subscribers.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Worship/Prayer operations
+  async getWorshipPrayer(id: string): Promise<WorshipPrayer | undefined> {
+    const [item] = await db.select().from(worshipPrayer).where(eq(worshipPrayer.id, id));
+    return item;
+  }
+
+  async getAllWorshipPrayer(): Promise<WorshipPrayer[]> {
+    return db.select().from(worshipPrayer).orderBy(desc(worshipPrayer.createdAt));
+  }
+
+  async getWorshipPrayerByCategory(category: string): Promise<WorshipPrayer[]> {
+    return db.select().from(worshipPrayer).where(eq(worshipPrayer.category, category)).orderBy(desc(worshipPrayer.createdAt));
+  }
+
+  async createWorshipPrayer(item: InsertWorshipPrayer): Promise<WorshipPrayer> {
+    const [newItem] = await db.insert(worshipPrayer).values(item).returning();
+    return newItem;
+  }
+
+  async updateWorshipPrayer(id: string, data: Partial<InsertWorshipPrayer>): Promise<WorshipPrayer | undefined> {
+    const [updatedItem] = await db.update(worshipPrayer)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(worshipPrayer.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async deleteWorshipPrayer(id: string): Promise<boolean> {
+    const result = await db.delete(worshipPrayer).where(eq(worshipPrayer.id, id)).returning();
+    return result.length > 0;
   }
 }
 

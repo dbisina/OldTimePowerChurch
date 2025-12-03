@@ -13,6 +13,7 @@ interface SermonCardProps {
   excerpt: string;
   duration: string;
   thumbnail?: string;
+  thumbnailUrl?: string;
   featured?: boolean;
 }
 
@@ -26,10 +27,12 @@ export function SermonCard({
   excerpt,
   duration,
   thumbnail,
+  thumbnailUrl,
   featured,
 }: SermonCardProps) {
   // Use slug if available, fallback to id
   const sermonPath = slug || id;
+  const displayThumbnail = thumbnailUrl || thumbnail;
   
   return (
     <Link href={`/sermons/${sermonPath}`}>
@@ -40,9 +43,9 @@ export function SermonCard({
         data-testid={`card-sermon-${id}`}
       >
         <div className="relative aspect-video bg-muted overflow-hidden">
-          {thumbnail ? (
+          {displayThumbnail ? (
             <img
-              src={thumbnail}
+              src={displayThumbnail}
               alt={title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
@@ -51,9 +54,11 @@ export function SermonCard({
               <Play className="h-12 w-12 text-white/50" />
             </div>
           )}
-          <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
-            {duration}
-          </div>
+          {duration && (
+            <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+              {duration}
+            </div>
+          )}
           {featured && (
             <Badge className="absolute top-3 left-3 bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0">
               Featured

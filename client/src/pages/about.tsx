@@ -29,21 +29,6 @@ const teamMembers = [
     role: "Senior Pastor",
     initials: "PJ",
   },
-  {
-    name: "Elder James",
-    role: "Teaching Elder",
-    initials: "EJ",
-  },
-  {
-    name: "Sister Mary",
-    role: "Women's Ministry Leader",
-    initials: "SM",
-  },
-  {
-    name: "Brother David",
-    role: "Youth Ministry Leader",
-    initials: "BD",
-  },
 ];
 
 export default function AboutPage() {
@@ -53,7 +38,7 @@ export default function AboutPage() {
         <section className="mb-16 md:mb-24">
           <div className="text-center mb-12">
             <img src={logoImage} alt="Old Time Power Church" className="h-32 w-32 mx-auto mb-6" />
-            <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">About Us</h1>
+            <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4">About Us</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Preparing the Way for the Lord
             </p>

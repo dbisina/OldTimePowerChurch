@@ -28,7 +28,7 @@ export function NewsletterCTA() {
   };
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#221672] to-[#583922] py-16 md:py-20">
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#221672] to-[#583922] py-12 md:py-20">
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-[#efc64e] blur-[100px]" />
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-[#b5621b] blur-[100px]" />

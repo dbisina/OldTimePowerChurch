@@ -42,7 +42,7 @@ export default function ContactPage() {
     <main className="min-h-screen py-8 md:py-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">Contact Us</h1>
+          <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4">Contact Us</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             We'd love to hear from you. Reach out with any questions, prayer requests, or just to say hello.
           </p>
@@ -111,6 +111,34 @@ export default function ContactPage() {
           </div>
 
           <div className="space-y-6">
+            <Card className="overflow-hidden">
+              <div className="aspect-video bg-muted">
+                <iframe
+                  src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.5!2d${CHURCH_LNG}!3d${CHURCH_LAT}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMzMnNDkuNyJOIDXCsDQ3JzQwLjgiRQ!5e0!3m2!1sen!2sng!4v1700000000000!5m2!1sen!2sng`}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Church location map"
+                />
+              </div>
+              <CardContent className="p-4">
+                <Button variant="outline" className="w-full" asChild>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${CHURCH_LAT},${CHURCH_LNG}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="link-get-directions"
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Get Directions
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="font-serif">Connect With Us</CardTitle>
@@ -198,34 +226,6 @@ export default function ContactPage() {
                     <span className="text-primary font-semibold">5:00 PM</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <div className="aspect-video bg-muted">
-                <iframe
-                  src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.5!2d${CHURCH_LNG}!3d${CHURCH_LAT}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMzMnNDkuNyJOIDXCsDQ3JzQwLjgiRQ!5e0!3m2!1sen!2sng!4v1700000000000!5m2!1sen!2sng`}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Church location map"
-                />
-              </div>
-              <CardContent className="p-4">
-                <Button variant="outline" className="w-full" asChild>
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${CHURCH_LAT},${CHURCH_LNG}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-testid="link-get-directions"
-                  >
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Get Directions
-                  </a>
-                </Button>
               </CardContent>
             </Card>
           </div>

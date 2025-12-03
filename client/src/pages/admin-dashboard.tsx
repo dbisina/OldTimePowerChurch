@@ -62,7 +62,8 @@ interface Sermon {
   preacher: string;
   serviceDay: string;
   date: string;
-  videoUrl: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
   startSec: number;
   endSec: number;
   excerpt?: string;
@@ -81,6 +82,7 @@ interface Announcement {
   publishedAt: string;
   expiresAt?: string;
   pinned: boolean;
+  sendEmail?: boolean;
 }
 
 interface Subscriber {
@@ -90,6 +92,19 @@ interface Subscriber {
   subscribedAt: string;
   status: "active" | "unsubscribed";
   preferredServiceDay?: string;
+}
+
+interface WorshipPrayer {
+  id: string;
+  title: string;
+  category: "worship" | "prayer";
+  videoUrl?: string;
+  startSec: number;
+  endSec?: number;
+  lyrics?: string;
+  chordChart?: string;
+  attachments?: string[];
+  createdAt: string;
 }
 
 interface Stats {
@@ -134,16 +149,20 @@ export default function AdminDashboardPage() {
   const [adminUser, setAdminUser] = useState<{ email: string; username: string; role: string } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   
-  // State for sermons
+  // State for content
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [worshipPrayerItems, setWorshipPrayerItems] = useState<WorshipPrayer[]>([]);
 
   // Dialog states
   const [sermonDialogOpen, setSermonDialogOpen] = useState(false);
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+  const [worshipPrayerDialogOpen, setWorshipPrayerDialogOpen] = useState(false);
+  
   const [editingSermon, setEditingSermon] = useState<Sermon | null>(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editingWorshipPrayer, setEditingWorshipPrayer] = useState<WorshipPrayer | null>(null);
 
   // Form states
   const [sermonForm, setSermonForm] = useState({
@@ -152,6 +171,7 @@ export default function AdminDashboardPage() {
     serviceDay: "sun",
     date: "",
     videoUrl: "",
+    thumbnailUrl: "",
     startTime: "0:00",
     endTime: "",
     excerpt: "",
@@ -172,6 +192,17 @@ export default function AdminDashboardPage() {
     expiresAt: "",
     pinned: false,
     graphicUrl: "",
+    sendEmail: false,
+  });
+
+  const [worshipPrayerForm, setWorshipPrayerForm] = useState({
+    title: "",
+    category: "worship" as "worship" | "prayer",
+    videoUrl: "",
+    startTime: "0:00",
+    endTime: "",
+    lyrics: "",
+    chordChart: "",
   });
 
   const { toast } = useToast();
@@ -221,10 +252,11 @@ export default function AdminDashboardPage() {
   const fetchData = async () => {
     try {
       const headers = getAuthHeaders();
-      const [sermonsRes, announcementsRes, subscribersRes, statsRes] = await Promise.all([
+      const [sermonsRes, announcementsRes, subscribersRes, worshipRes, statsRes] = await Promise.all([
         fetch("/api/sermons"),
         fetch("/api/announcements"),
         fetch("/api/admin/subscribers", { headers }),
+        fetch("/api/worship-prayer"),
         fetch("/api/admin/stats", { headers }),
       ]);
 
@@ -239,6 +271,10 @@ export default function AdminDashboardPage() {
       if (subscribersRes.ok) {
         const data = await subscribersRes.json();
         setSubscribers(data);
+      }
+      if (worshipRes.ok) {
+        const data = await worshipRes.json();
+        setWorshipPrayerItems(data);
       }
       if (statsRes.ok) {
         const data = await statsRes.json();
@@ -265,6 +301,7 @@ export default function AdminDashboardPage() {
       serviceDay: "sun",
       date: "",
       videoUrl: "",
+      thumbnailUrl: "",
       startTime: "0:00",
       endTime: "",
       excerpt: "",
@@ -289,6 +326,7 @@ export default function AdminDashboardPage() {
           ...prev,
           title: prev.title || data.title || "",
           preacher: prev.preacher || data.author || "",
+          thumbnailUrl: prev.thumbnailUrl || data.thumbnail || "",
         }));
         toast({ title: "Video info loaded", description: data.title });
       }
@@ -430,7 +468,8 @@ export default function AdminDashboardPage() {
       preacher: sermon.preacher,
       serviceDay: sermon.serviceDay,
       date: new Date(sermon.date).toISOString().split('T')[0],
-      videoUrl: sermon.videoUrl,
+      videoUrl: sermon.videoUrl || "",
+      thumbnailUrl: sermon.thumbnailUrl || "",
       startTime: formatTime(sermon.startSec),
       endTime: formatTime(sermon.endSec || 0),
       excerpt: sermon.excerpt || "",
@@ -443,7 +482,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleSaveSermon = async () => {
-    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date || !sermonForm.videoUrl) {
+    if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date) {
       toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
@@ -453,7 +492,8 @@ export default function AdminDashboardPage() {
       preacher: sermonForm.preacher,
       serviceDay: sermonForm.serviceDay,
       date: new Date(sermonForm.date).toISOString(),
-      videoUrl: sermonForm.videoUrl,
+      videoUrl: sermonForm.videoUrl || null,
+      thumbnailUrl: sermonForm.thumbnailUrl || null,
       startSec: parseTimeToSeconds(sermonForm.startTime),
       endSec: sermonForm.endTime ? parseTimeToSeconds(sermonForm.endTime) : null,
       excerpt: sermonForm.excerpt || null,
@@ -513,6 +553,7 @@ export default function AdminDashboardPage() {
       expiresAt: "",
       pinned: false,
       graphicUrl: "",
+      sendEmail: false,
     });
     setAnnouncementDialogOpen(true);
   };
@@ -527,6 +568,7 @@ export default function AdminDashboardPage() {
       expiresAt: announcement.expiresAt ? new Date(announcement.expiresAt).toISOString().split('T')[0] : "",
       pinned: announcement.pinned,
       graphicUrl: announcement.graphicUrl || "",
+      sendEmail: false,
     });
     setAnnouncementDialogOpen(true);
   };
@@ -545,6 +587,7 @@ export default function AdminDashboardPage() {
       publishedAt: new Date(announcementForm.publishedAt).toISOString(),
       expiresAt: announcementForm.expiresAt ? new Date(announcementForm.expiresAt).toISOString() : null,
       pinned: announcementForm.pinned,
+      sendEmail: announcementForm.sendEmail,
     };
 
     try {
@@ -580,6 +623,88 @@ export default function AdminDashboardPage() {
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete announcement", variant: "destructive" });
+    }
+  };
+
+  // Worship/Prayer handlers
+  const openAddWorshipPrayerDialog = () => {
+    setEditingWorshipPrayer(null);
+    setWorshipPrayerForm({
+      title: "",
+      category: "worship",
+      videoUrl: "",
+      startTime: "0:00",
+      endTime: "",
+      lyrics: "",
+      chordChart: "",
+    });
+    setWorshipPrayerDialogOpen(true);
+  };
+
+  const openEditWorshipPrayerDialog = (item: WorshipPrayer) => {
+    setEditingWorshipPrayer(item);
+    setWorshipPrayerForm({
+      title: item.title,
+      category: item.category,
+      videoUrl: item.videoUrl || "",
+      startTime: formatTime(item.startSec),
+      endTime: formatTime(item.endSec || 0),
+      lyrics: item.lyrics || "",
+      chordChart: item.chordChart || "",
+    });
+    setWorshipPrayerDialogOpen(true);
+  };
+
+  const handleSaveWorshipPrayer = async () => {
+    if (!worshipPrayerForm.title || !worshipPrayerForm.category) {
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+
+    const payload = {
+      title: worshipPrayerForm.title,
+      category: worshipPrayerForm.category,
+      videoUrl: worshipPrayerForm.videoUrl || null,
+      startSec: parseTimeToSeconds(worshipPrayerForm.startTime),
+      endSec: worshipPrayerForm.endTime ? parseTimeToSeconds(worshipPrayerForm.endTime) : null,
+      lyrics: worshipPrayerForm.lyrics || null,
+      chordChart: worshipPrayerForm.chordChart || null,
+      attachments: [],
+    };
+
+    try {
+      const url = editingWorshipPrayer ? `/api/admin/worship-prayer/${editingWorshipPrayer.id}` : "/api/admin/worship-prayer";
+      const method = editingWorshipPrayer ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast({ title: "Success", description: `Item ${editingWorshipPrayer ? "updated" : "created"} successfully` });
+        setWorshipPrayerDialogOpen(false);
+        fetchData();
+      } else {
+        throw new Error("Failed to save item");
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save item", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteWorshipPrayer = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/worship-prayer/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        toast({ title: "Item deleted successfully" });
+        fetchData();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete item", variant: "destructive" });
     }
   };
 
@@ -728,6 +853,13 @@ export default function AdminDashboardPage() {
             >
               <Mail className="h-4 w-4" />
               <span>Newsletter</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="worship-prayer"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+            >
+              <Music className="h-4 w-4" />
+              <span>Worship & Prayer</span>
             </TabsTrigger>
             <TabsTrigger
               value="settings"
@@ -1476,6 +1608,191 @@ export default function AdminDashboardPage() {
                 </Table>
               </div>
             </Card>
+          </TabsContent>
+
+          {/* Worship & Prayer Tab */}
+          <TabsContent value="worship-prayer" className="mt-0 space-y-6">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-foreground">Worship & Prayer</h2>
+                <p className="text-muted-foreground mt-1">Manage worship sessions and prayer content</p>
+              </div>
+              <Dialog open={worshipPrayerDialogOpen} onOpenChange={setWorshipPrayerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    className="bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90 transition-all"
+                    onClick={openAddWorshipPrayerDialog}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-background border-border max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl text-foreground">
+                      {editingWorshipPrayer ? "Edit Item" : "Add New Item"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingWorshipPrayer ? "Update worship or prayer details" : "Create a new worship or prayer entry"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-5">
+                    <div>
+                      <Label className="mb-2 block">Title *</Label>
+                      <Input
+                        value={worshipPrayerForm.title}
+                        onChange={(e) => setWorshipPrayerForm({ ...worshipPrayerForm, title: e.target.value })}
+                        placeholder="Sunday Morning Worship"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="mb-2 block">Category *</Label>
+                      <Select value={worshipPrayerForm.category} onValueChange={(value: 'worship' | 'prayer') => setWorshipPrayerForm({ ...worshipPrayerForm, category: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="worship">Worship</SelectItem>
+                          <SelectItem value="prayer">Prayer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="mb-2 flex items-center gap-2">
+                        <Video className="h-4 w-4" />
+                        YouTube URL
+                      </Label>
+                      <Input
+                        value={worshipPrayerForm.videoUrl}
+                        onChange={(e) => setWorshipPrayerForm({ ...worshipPrayerForm, videoUrl: e.target.value })}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="mb-2 block">Start Time (MM:SS)</Label>
+                        <Input
+                          value={worshipPrayerForm.startTime}
+                          onChange={(e) => setWorshipPrayerForm({ ...worshipPrayerForm, startTime: e.target.value })}
+                          placeholder="0:00"
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-2 block">End Time (MM:SS)</Label>
+                        <Input
+                          value={worshipPrayerForm.endTime}
+                          onChange={(e) => setWorshipPrayerForm({ ...worshipPrayerForm, endTime: e.target.value })}
+                          placeholder="45:30"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="mb-2 block">Lyrics / Description</Label>
+                      <Textarea
+                        value={worshipPrayerForm.lyrics}
+                        onChange={(e) => setWorshipPrayerForm({ ...worshipPrayerForm, lyrics: e.target.value })}
+                        placeholder="Enter lyrics or description..."
+                        className="min-h-[100px]"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="mb-2 block">Chord Chart (Optional)</Label>
+                      <Textarea
+                        value={worshipPrayerForm.chordChart}
+                        onChange={(e) => setWorshipPrayerForm({ ...worshipPrayerForm, chordChart: e.target.value })}
+                        placeholder="Paste chord chart content..."
+                        className="min-h-[100px] font-mono"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        onClick={handleSaveWorshipPrayer}
+                        className="flex-1 bg-primary text-primary-foreground border-0 shadow-lg hover:bg-primary/90"
+                      >
+                        {editingWorshipPrayer ? "Update" : "Create"} Item
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setWorshipPrayerDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {worshipPrayerItems.map((item) => (
+                <Card key={item.id} className="bg-card/20 backdrop-blur-xl border-border hover:border-primary/50 transition-all shadow-lg hover:shadow-primary/10 flex flex-col overflow-hidden">
+                  {item.videoUrl && extractYouTubeVideoId(item.videoUrl) && (
+                    <div className="w-full aspect-video overflow-hidden relative group">
+                      <img
+                        src={`https://img.youtube.com/vi/${extractYouTubeVideoId(item.videoUrl)}/mqdefault.jpg`}
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded-md flex items-center gap-1">
+                        <Video className="h-3 w-3" />
+                        Video
+                      </div>
+                    </div>
+                  )}
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mb-2 ${
+                          item.category === 'worship' 
+                            ? "bg-purple-500/20 text-purple-400" 
+                            : "bg-blue-500/20 text-blue-400"
+                        }`}>
+                          {item.category === 'worship' ? <Music className="h-3 w-3 mr-1" /> : <MessageCircle className="h-3 w-3 mr-1" />}
+                          {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                        </span>
+                        <CardTitle className="text-lg text-foreground line-clamp-1">
+                          {item.title}
+                        </CardTitle>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col">
+                    {item.lyrics && (
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
+                        {item.lyrics}
+                      </p>
+                    )}
+                    <div className="flex gap-2 mt-auto">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 border-border hover:bg-primary/20 hover:text-primary"
+                        onClick={() => openEditWorshipPrayerDialog(item)}
+                      >
+                        <Edit2 className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 border-border hover:bg-destructive/20 hover:text-destructive hover:border-destructive"
+                        onClick={() => handleDeleteWorshipPrayer(item.id)}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
 
           {/* Settings Tab */}

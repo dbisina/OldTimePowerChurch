@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SermonCard } from "@/components/SermonCard";
+import { OutlineViewer } from "@/components/OutlineViewer";
 
 interface Sermon {
   id: string;
@@ -24,7 +25,7 @@ interface Sermon {
   excerpt?: string;
   duration?: string;
   featured: boolean;
-  outline?: string[];
+  outline?: string | string[];
 }
 
 const serviceDays = ["All", "Sunday", "Tuesday", "Friday"];
@@ -41,6 +42,7 @@ export default function SermonsPage() {
   const [activeTab, setActiveTab] = useState("sermons");
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOutline, setSelectedOutline] = useState<Sermon | null>(null);
 
   useEffect(() => {
     fetchSermons();
@@ -86,7 +88,7 @@ export default function SermonsPage() {
     <main className="min-h-screen pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-10">
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
+          <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
             Spiritual Resources
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
@@ -228,8 +230,16 @@ export default function SermonsPage() {
                 {sermons.map((sermon) => (
                   <Card 
                     key={sermon.id}
-                    className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all"
+                    className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all cursor-pointer hover:shadow-md"
                     data-testid={`card-scripture-${sermon.id}`}
+                    onClick={() => {
+                      if (sermon.outline && sermon.outline.length > 0) {
+                        // @ts-ignore - Adding temporary property for viewer
+                        sermon.outlineContent = Array.isArray(sermon.outline) ? sermon.outline.join("\n") : sermon.outline;
+                        // @ts-ignore
+                        setSelectedOutline(sermon);
+                      }
+                    }}
                   >
                     <CardHeader>
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
@@ -254,6 +264,11 @@ export default function SermonsPage() {
                       {sermon.excerpt && (
                         <p className="text-muted-foreground">{sermon.excerpt}</p>
                       )}
+                      {!sermon.outline || sermon.outline.length === 0 ? (
+                        <p className="text-xs text-muted-foreground mt-2 italic">No outline available</p>
+                      ) : (
+                        <p className="text-xs text-primary mt-2 font-medium">Click to read outline</p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -267,6 +282,25 @@ export default function SermonsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* @ts-ignore */}
+      {selectedOutline && (
+        <OutlineViewer
+          isOpen={!!selectedOutline}
+          // @ts-ignore
+          onClose={() => setSelectedOutline(null)}
+          // @ts-ignore
+          title={selectedOutline.title}
+          // @ts-ignore
+          preacher={selectedOutline.preacher}
+          // @ts-ignore
+          date={selectedOutline.date}
+          // @ts-ignore
+          serviceDay={selectedOutline.serviceDay}
+          // @ts-ignore
+          content={selectedOutline.outlineContent || ""}
+        />
+      )}
     </main>
   );
 }
