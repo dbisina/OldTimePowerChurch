@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { OutlineViewer } from "./OutlineViewer";
 
 interface Sermon {
   id: string;
@@ -26,7 +25,6 @@ const serviceDayMap: Record<string, string> = {
 export function FeaturedOutlines() {
   const [outlines, setOutlines] = useState<Sermon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOutline, setSelectedOutline] = useState<Sermon | null>(null);
 
   useEffect(() => {
     fetchOutlines();
@@ -82,53 +80,43 @@ export function FeaturedOutlines() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {outlines.map((outline) => (
-            <Card 
-              key={outline.id}
-              className="cursor-pointer hover:shadow-lg transition-all border-primary/20 hover:border-primary/50 group"
-              onClick={() => setSelectedOutline(outline)}
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start mb-2">
-                  <Badge variant="outline" className="text-xs">
-                    {outline.serviceDay}
-                  </Badge>
-                  <ScrollText className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <CardTitle className="font-serif text-xl line-clamp-2 group-hover:text-[#b5621b] transition-colors">
-                  {outline.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {outline.excerpt || "Click to read the full study outline..."}
-                </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    <span>{outline.preacher}</span>
+            <Link key={outline.id} href={`/sermons/${outline.id}`}>
+              <Card 
+                className="cursor-pointer hover:shadow-lg transition-all border-primary/20 hover:border-primary/50 group"
+              >
+                <CardHeader>
+                  <div className="flex justify-between items-start mb-2">
+                    <Badge variant="outline" className="text-xs">
+                      {outline.serviceDay}
+                    </Badge>
+                    <ScrollText className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{outline.date}</span>
+                  <CardTitle className="font-serif text-xl line-clamp-2 group-hover:text-[#b5621b] transition-colors">
+                    {outline.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                    {outline.excerpt || "Click to read the full study outline..."}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      <span>{outline.preacher}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{outline.date}</span>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
 
-      {selectedOutline && (
-        <OutlineViewer
-          isOpen={!!selectedOutline}
-          onClose={() => setSelectedOutline(null)}
-          title={selectedOutline.title}
-          preacher={selectedOutline.preacher}
-          date={selectedOutline.date}
-          serviceDay={selectedOutline.serviceDay}
-          content={selectedOutline.outline || ""}
-        />
-      )}
+
     </section>
   );
 }

@@ -297,23 +297,26 @@ export default function SermonDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Video Player */}
-            {embedUrl ? (
-              <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                <iframe
-                  src={embedUrl}
-                  title={sermon.title}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center">
-                <div className="text-center">
-                  <Video className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">No video available</p>
+            {/* Video Player - Only show if video URL exists */}
+            {sermon.videoUrl && (
+              embedUrl ? (
+                <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                  <iframe
+                    src={embedUrl}
+                    title={sermon.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center">
+                  <div className="text-center">
+                    <Video className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">Video unavailable</p>
+                  </div>
+                </div>
+              )
             )}
 
             {/* Sermon Info Card */}
@@ -428,46 +431,80 @@ export default function SermonDetailPage() {
             {/* Sermon Outline */}
             {/* Sermon Outline */}
             {sermon.outline && (
-            <Card className="border-0 shadow-lg overflow-hidden">
-              <Collapsible open={outlineOpen} onOpenChange={setOutlineOpen}>
-                <CollapsibleTrigger asChild>
-                  <button 
-                    className="w-full flex items-center justify-between p-5 hover:bg-muted/50 transition-colors"
-                    data-testid="button-toggle-outline"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-primary/10">
-                        <BookOpen className="h-5 w-5 text-primary" />
+              sermon.videoUrl ? (
+                // Collapsible Outline for Video Sermons
+                <Card className="border-0 shadow-lg overflow-hidden">
+                  <Collapsible open={outlineOpen} onOpenChange={setOutlineOpen}>
+                    <CollapsibleTrigger asChild>
+                      <button 
+                        className="w-full flex items-center justify-between p-5 hover:bg-muted/50 transition-colors"
+                        data-testid="button-toggle-outline"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <BookOpen className="h-5 w-5 text-primary" />
+                          </div>
+                          <span className="font-serif text-xl font-semibold">Sermon Outline</span>
+                        </div>
+                        <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${outlineOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <Separator />
+                      <div className="p-6 prose prose-sm dark:prose-invert max-w-none">
+                        <div className="whitespace-pre-wrap font-sans text-base leading-relaxed">
+                          {sermon.outline.split('\n').map((line, i) => {
+                            if (line.startsWith('## ')) {
+                              return <h2 key={i} className="font-serif text-2xl font-bold mt-6 mb-3 text-primary">{line.replace('## ', '')}</h2>;
+                            }
+                            if (line.startsWith('### ')) {
+                              return <h3 key={i} className="font-serif text-xl font-semibold mt-4 mb-2">{line.replace('### ', '')}</h3>;
+                            }
+                            if (line.startsWith('- ')) {
+                              return <p key={i} className="ml-4 mb-1 flex items-start gap-2"><span className="text-primary">•</span>{line.replace('- ', '')}</p>;
+                            }
+                            if (line.match(/^\d+\./)) {
+                              return <p key={i} className="ml-4 mb-1">{line}</p>;
+                            }
+                            return line.trim() ? <p key={i} className="mb-2">{line}</p> : <br key={i} />;
+                          })}
+                        </div>
                       </div>
-                      <span className="font-serif text-xl font-semibold">Sermon Outline</span>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              ) : (
+                // Full Visible Outline for Text Sermons
+                <Card className="border-0 shadow-lg overflow-hidden">
+                  <CardHeader className="pb-2 border-b">
+                    <CardTitle className="font-serif text-xl flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      Sermon Outline
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 md:p-8">
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
+                      <div className="whitespace-pre-wrap font-serif text-lg leading-relaxed">
+                        {sermon.outline.split('\n').map((line, i) => {
+                          if (line.startsWith('## ')) {
+                            return <h2 key={i} className="font-serif text-2xl font-bold mt-8 mb-4 text-primary">{line.replace('## ', '')}</h2>;
+                          }
+                          if (line.startsWith('### ')) {
+                            return <h3 key={i} className="font-serif text-xl font-semibold mt-6 mb-3">{line.replace('### ', '')}</h3>;
+                          }
+                          if (line.startsWith('- ')) {
+                            return <p key={i} className="ml-6 mb-2 flex items-start gap-2"><span className="text-primary mt-1.5">•</span>{line.replace('- ', '')}</p>;
+                          }
+                          if (line.match(/^\d+\./)) {
+                            return <p key={i} className="ml-6 mb-2 font-medium">{line}</p>;
+                          }
+                          return line.trim() ? <p key={i} className="mb-4">{line}</p> : <br key={i} />;
+                        })}
+                      </div>
                     </div>
-                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${outlineOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Separator />
-                  <div className="p-6 prose prose-sm dark:prose-invert max-w-none">
-                    <div className="whitespace-pre-wrap font-sans text-base leading-relaxed">
-                      {sermon.outline.split('\n').map((line, i) => {
-                        if (line.startsWith('## ')) {
-                          return <h2 key={i} className="font-serif text-2xl font-bold mt-6 mb-3 text-primary">{line.replace('## ', '')}</h2>;
-                        }
-                        if (line.startsWith('### ')) {
-                          return <h3 key={i} className="font-serif text-xl font-semibold mt-4 mb-2">{line.replace('### ', '')}</h3>;
-                        }
-                        if (line.startsWith('- ')) {
-                          return <p key={i} className="ml-4 mb-1 flex items-start gap-2"><span className="text-primary">•</span>{line.replace('- ', '')}</p>;
-                        }
-                        if (line.match(/^\d+\./)) {
-                          return <p key={i} className="ml-4 mb-1">{line}</p>;
-                        }
-                        return line.trim() ? <p key={i} className="mb-2">{line}</p> : <br key={i} />;
-                      })}
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
+                  </CardContent>
+                </Card>
+              )
             )}
 
             {/* Scripture References */}

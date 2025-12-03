@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { Search, Filter, X, BookOpen, Music, ScrollText, Play, Clock, Calendar, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SermonCard } from "@/components/SermonCard";
-import { OutlineViewer } from "@/components/OutlineViewer";
 
 interface Sermon {
   id: string;
@@ -26,6 +26,7 @@ interface Sermon {
   duration?: string;
   featured: boolean;
   outline?: string | string[];
+  videoUrl?: string;
 }
 
 const serviceDays = ["All", "Sunday", "Tuesday", "Friday"];
@@ -73,8 +74,13 @@ export default function SermonsPage() {
       (sermon.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     const matchesDay = selectedDay === "All" || sermon.serviceDay === selectedDay;
     const matchesFeatured = !showFeaturedOnly || sermon.featured;
-    return matchesSearch && matchesDay && matchesFeatured;
+    // Only show video sermons in the main list
+    const hasVideo = !!sermon.videoUrl;
+    
+    return matchesSearch && matchesDay && matchesFeatured && hasVideo;
   });
+
+  const scriptureSermons = sermons.filter(s => !!s.outline && s.outline.length > 0);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -203,7 +209,7 @@ export default function SermonsPage() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <p className="text-muted-foreground text-lg mb-4">No sermons found matching your criteria.</p>
+                <p className="text-muted-foreground text-lg mb-4">No video sermons found matching your criteria.</p>
                 <Button variant="outline" onClick={clearFilters}>
                   Clear Filters
                 </Button>
@@ -225,52 +231,44 @@ export default function SermonsPage() {
                 A compilation of sermon outlines and scripture studies from our teaching ministry.
               </p>
             </div>
-            {sermons.length > 0 ? (
+            {scriptureSermons.length > 0 ? (
               <div className="space-y-6">
-                {sermons.map((sermon) => (
-                  <Card 
-                    key={sermon.id}
-                    className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all cursor-pointer hover:shadow-md"
-                    data-testid={`card-scripture-${sermon.id}`}
-                    onClick={() => {
-                      if (sermon.outline && sermon.outline.length > 0) {
-                        // @ts-ignore - Adding temporary property for viewer
-                        sermon.outlineContent = Array.isArray(sermon.outline) ? sermon.outline.join("\n") : sermon.outline;
-                        // @ts-ignore
-                        setSelectedOutline(sermon);
-                      }
-                    }}
-                  >
-                    <CardHeader>
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                        <div>
-                          <Badge variant="outline" className="border-primary/50 text-primary mb-2">
-                            {sermon.serviceDay} Service
-                          </Badge>
-                          <CardTitle className="text-xl bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
-                            {sermon.title}
-                          </CardTitle>
+                {scriptureSermons.map((sermon) => (
+                  <Link key={sermon.id} href={`/sermons/${sermon.slug || sermon.id}`}>
+                    <Card 
+                      className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all cursor-pointer hover:shadow-md"
+                      data-testid={`card-scripture-${sermon.id}`}
+                    >
+                      <CardHeader>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                          <div>
+                            <Badge variant="outline" className="border-primary/50 text-primary mb-2">
+                              {sermon.serviceDay} Service
+                            </Badge>
+                            <CardTitle className="text-xl bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
+                              {sermon.title}
+                            </CardTitle>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            {sermon.preacher}
+                            <span className="mx-2">|</span>
+                            <Calendar className="h-4 w-4" />
+                            {sermon.date}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="h-4 w-4" />
-                          {sermon.preacher}
-                          <span className="mx-2">|</span>
-                          <Calendar className="h-4 w-4" />
-                          {sermon.date}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {sermon.excerpt && (
-                        <p className="text-muted-foreground">{sermon.excerpt}</p>
-                      )}
-                      {!sermon.outline || sermon.outline.length === 0 ? (
-                        <p className="text-xs text-muted-foreground mt-2 italic">No outline available</p>
-                      ) : (
-                        <p className="text-xs text-primary mt-2 font-medium">Click to read outline</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                      </CardHeader>
+                      <CardContent>
+                        {sermon.excerpt && (
+                          <p className="text-muted-foreground">{sermon.excerpt}</p>
+                        )}
+                        <p className="text-xs text-primary mt-2 font-medium flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" />
+                          Read full outline
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -282,25 +280,6 @@ export default function SermonsPage() {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* @ts-ignore */}
-      {selectedOutline && (
-        <OutlineViewer
-          isOpen={!!selectedOutline}
-          // @ts-ignore
-          onClose={() => setSelectedOutline(null)}
-          // @ts-ignore
-          title={selectedOutline.title}
-          // @ts-ignore
-          preacher={selectedOutline.preacher}
-          // @ts-ignore
-          date={selectedOutline.date}
-          // @ts-ignore
-          serviceDay={selectedOutline.serviceDay}
-          // @ts-ignore
-          content={selectedOutline.outlineContent || ""}
-        />
-      )}
     </main>
   );
 }

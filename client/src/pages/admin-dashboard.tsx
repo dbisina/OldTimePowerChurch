@@ -181,6 +181,7 @@ export default function AdminDashboardPage() {
     featured: false,
     scriptures: "",
     tags: "",
+    type: "video" as "video" | "text",
   });
 
   const [outlineUploading, setOutlineUploading] = useState(false);
@@ -311,6 +312,7 @@ export default function AdminDashboardPage() {
       featured: false,
       scriptures: "",
       tags: "",
+      type: "video",
     });
     setSermonDialogOpen(true);
   };
@@ -479,13 +481,21 @@ export default function AdminDashboardPage() {
       featured: sermon.featured,
       scriptures: sermon.scriptures?.join(", ") || "",
       tags: sermon.tags?.join(", ") || "",
+      type: sermon.videoUrl ? "video" : "text",
     });
     setSermonDialogOpen(true);
   };
 
   const handleSaveSermon = async () => {
+    // Basic validation
     if (!sermonForm.title || !sermonForm.preacher || !sermonForm.date) {
       toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+
+    // Video validation
+    if (sermonForm.type === "video" && !sermonForm.videoUrl) {
+      toast({ title: "Error", description: "Video URL is required for video sermons", variant: "destructive" });
       return;
     }
 
@@ -494,10 +504,10 @@ export default function AdminDashboardPage() {
       preacher: sermonForm.preacher,
       serviceDay: sermonForm.serviceDay,
       date: new Date(sermonForm.date).toISOString(),
-      videoUrl: sermonForm.videoUrl || null,
-      thumbnailUrl: sermonForm.thumbnailUrl || null,
-      startSec: parseTimeToSeconds(sermonForm.startTime),
-      endSec: sermonForm.endTime ? parseTimeToSeconds(sermonForm.endTime) : null,
+      videoUrl: sermonForm.type === "video" ? (sermonForm.videoUrl || null) : null,
+      thumbnailUrl: sermonForm.type === "video" ? (sermonForm.thumbnailUrl || null) : null,
+      startSec: sermonForm.type === "video" ? parseTimeToSeconds(sermonForm.startTime) : 0,
+      endSec: sermonForm.type === "video" && sermonForm.endTime ? parseTimeToSeconds(sermonForm.endTime) : null,
       excerpt: sermonForm.excerpt || null,
       outline: sermonForm.outline || null,
       featured: sermonForm.featured,
@@ -908,6 +918,47 @@ export default function AdminDashboardPage() {
                       />
                     </div>
 
+                    {/* Sermon Type Selection */}
+                    <div className="space-y-3">
+                      <Label className="text-foreground mb-2 block">Sermon Type</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setSermonForm({ ...sermonForm, type: "video" })}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
+                            sermonForm.type === "video"
+                              ? "border-primary bg-primary/10 shadow-lg"
+                              : "border-border hover:border-primary/50 bg-background/50"
+                          }`}
+                        >
+                          <div className={`p-3 rounded-full ${sermonForm.type === "video" ? "bg-primary/20" : "bg-muted"}`}>
+                            <Video className={`h-6 w-6 ${sermonForm.type === "video" ? "text-primary" : "text-muted-foreground"}`} />
+                          </div>
+                          <div className="text-center">
+                            <p className={`font-medium ${sermonForm.type === "video" ? "text-primary" : "text-foreground"}`}>Video Sermon</p>
+                            <p className="text-xs text-muted-foreground mt-1">YouTube video with optional outline</p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSermonForm({ ...sermonForm, type: "text" })}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
+                            sermonForm.type === "text"
+                              ? "border-primary bg-primary/10 shadow-lg"
+                              : "border-border hover:border-primary/50 bg-background/50"
+                          }`}
+                        >
+                          <div className={`p-3 rounded-full ${sermonForm.type === "text" ? "bg-primary/20" : "bg-muted"}`}>
+                            <FileText className={`h-6 w-6 ${sermonForm.type === "text" ? "text-primary" : "text-muted-foreground"}`} />
+                          </div>
+                          <div className="text-center">
+                            <p className={`font-medium ${sermonForm.type === "text" ? "text-primary" : "text-foreground"}`}>Text / Outline</p>
+                            <p className="text-xs text-muted-foreground mt-1">Written sermon or outline only</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="mb-2 block">Preacher *</Label>
@@ -941,57 +992,61 @@ export default function AdminDashboardPage() {
                       />
                     </div>
 
-                    <div>
-                      <Label className="mb-2 flex items-center gap-2">
-                        <Video className="h-4 w-4" />
-                        YouTube URL *
-                      </Label>
-                      <Input
-                        value={sermonForm.videoUrl}
-                        onChange={(e) => setSermonForm({ ...sermonForm, videoUrl: e.target.value })}
-                        onBlur={(e) => fetchYouTubeMetadata(e.target.value)}
-                        placeholder="https://www.youtube.com/watch?v=..."
-                      />
-                      <p className="text-muted-foreground text-xs mt-1">Paste a YouTube URL and we'll auto-fill the title</p>
-                    </div>
-
-                    {/* Video Preview */}
-                    {sermonForm.videoUrl && extractYouTubeVideoId(sermonForm.videoUrl) && (
-                      <div className="rounded-xl overflow-hidden border-2 border-border shadow-lg">
-                        <iframe
-                          width="100%"
-                          height="320"
-                          src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sermonForm.videoUrl)}?start=${parseTimeToSeconds(sermonForm.startTime)}${sermonForm.endTime ? `&end=${parseTimeToSeconds(sermonForm.endTime)}` : ''}`}
-                          title="YouTube video preview"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                        <div className="bg-muted p-3 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4 inline mr-2" />
-                          Preview shows video from {sermonForm.startTime} {sermonForm.endTime && `to ${sermonForm.endTime}`}
+                    {sermonForm.type === "video" && (
+                      <>
+                        <div>
+                          <Label className="mb-2 flex items-center gap-2">
+                            <Video className="h-4 w-4" />
+                            YouTube URL *
+                          </Label>
+                          <Input
+                            value={sermonForm.videoUrl}
+                            onChange={(e) => setSermonForm({ ...sermonForm, videoUrl: e.target.value })}
+                            onBlur={(e) => fetchYouTubeMetadata(e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                          />
+                          <p className="text-muted-foreground text-xs mt-1">Paste a YouTube URL and we'll auto-fill the title</p>
                         </div>
-                      </div>
-                    )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="mb-2 block">Start Time (MM:SS) *</Label>
-                        <Input
-                          value={sermonForm.startTime}
-                          onChange={(e) => setSermonForm({ ...sermonForm, startTime: e.target.value })}
-                          placeholder="0:00"
-                        />
-                      </div>
-                      <div>
-                        <Label className="mb-2 block">End Time (MM:SS)</Label>
-                        <Input
-                          value={sermonForm.endTime}
-                          onChange={(e) => setSermonForm({ ...sermonForm, endTime: e.target.value })}
-                          placeholder="45:30"
-                        />
-                      </div>
-                    </div>
+                        {/* Video Preview */}
+                        {sermonForm.videoUrl && extractYouTubeVideoId(sermonForm.videoUrl) && (
+                          <div className="rounded-xl overflow-hidden border-2 border-border shadow-lg">
+                            <iframe
+                              width="100%"
+                              height="320"
+                              src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sermonForm.videoUrl)}?start=${parseTimeToSeconds(sermonForm.startTime)}${sermonForm.endTime ? `&end=${parseTimeToSeconds(sermonForm.endTime)}` : ''}`}
+                              title="YouTube video preview"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                            <div className="bg-muted p-3 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4 inline mr-2" />
+                              Preview shows video from {sermonForm.startTime} {sermonForm.endTime && `to ${sermonForm.endTime}`}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="mb-2 block">Start Time (MM:SS) *</Label>
+                            <Input
+                              value={sermonForm.startTime}
+                              onChange={(e) => setSermonForm({ ...sermonForm, startTime: e.target.value })}
+                              placeholder="0:00"
+                            />
+                          </div>
+                          <div>
+                            <Label className="mb-2 block">End Time (MM:SS)</Label>
+                            <Input
+                              value={sermonForm.endTime}
+                              onChange={(e) => setSermonForm({ ...sermonForm, endTime: e.target.value })}
+                              placeholder="45:30"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     <div>
                       <Label className="mb-2 block">Excerpt</Label>
