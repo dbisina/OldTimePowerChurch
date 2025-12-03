@@ -53,6 +53,8 @@ import {
   FileText,
   Upload,
   Loader2,
+  Music,
+  MessageCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
