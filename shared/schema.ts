@@ -53,6 +53,10 @@ export const sermons = pgTable("sermons", {
   scriptures: text("scriptures").array(),
   tags: text("tags").array(),
   featured: boolean("featured").default(false),
+  // Engagement counters
+  viewCount: integer("view_count").default(0),
+  likeCount: integer("like_count").default(0),
+  commentCount: integer("comment_count").default(0),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -136,3 +140,40 @@ export const insertWorshipPrayerSchema = createInsertSchema(worshipPrayer).omit(
 
 export type InsertWorshipPrayer = z.infer<typeof insertWorshipPrayerSchema>;
 export type WorshipPrayer = typeof worshipPrayer.$inferSelect;
+
+// Comments table for sermon engagement
+export const comments = pgTable("comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sermonId: varchar("sermon_id").notNull().references(() => sermons.id, { onDelete: "cascade" }),
+  authorName: text("author_name").notNull(),
+  authorEmail: text("author_email"),
+  content: text("content").notNull(),
+  approved: boolean("approved").default(false), // Moderation - comments require approval
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).omit({
+  id: true,
+  createdAt: true,
+  approved: true,
+});
+
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Comment = typeof comments.$inferSelect;
+
+// Likes table for tracking unique likes per visitor
+export const likes = pgTable("likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sermonId: varchar("sermon_id").notNull().references(() => sermons.id, { onDelete: "cascade" }),
+  visitorId: text("visitor_id").notNull(), // Cookie-based identifier for anonymous likes
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLikeSchema = createInsertSchema(likes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLike = z.infer<typeof insertLikeSchema>;
+export type Like = typeof likes.$inferSelect;
+

@@ -5,7 +5,8 @@ import {
   insertSermonSchema,
   insertAnnouncementSchema,
   insertSubscriberSchema,
-  insertWorshipPrayerSchema
+  insertWorshipPrayerSchema,
+  insertCommentSchema
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -782,6 +783,148 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete item" });
+    }
+  });
+
+  // ==================== ENGAGEMENT ROUTES ====================
+
+  // Track sermon view
+  app.post("/api/sermons/:id/view", async (req: Request, res: Response) => {
+    try {
+      const sermon = await storage.getSermon(req.params.id);
+      if (!sermon) {
+        return res.status(404).json({ error: "Sermon not found" });
+      }
+      await storage.incrementSermonViewCount(req.params.id);
+      res.json({ success: true, viewCount: (sermon.viewCount || 0) + 1 });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track view" });
+    }
+  });
+
+  // Get like status for a visitor
+  app.get("/api/sermons/:id/likes", async (req: Request, res: Response) => {
+    try {
+      const visitorId = req.query.visitorId as string;
+      if (!visitorId) {
+        return res.json({ liked: false });
+      }
+      const like = await storage.getLike(req.params.id, visitorId);
+      res.json({ liked: !!like });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check like status" });
+    }
+  });
+
+  // Toggle like (like or unlike)
+  app.post("/api/sermons/:id/like", async (req: Request, res: Response) => {
+    try {
+      const { visitorId } = req.body;
+      if (!visitorId) {
+        return res.status(400).json({ error: "Visitor ID required" });
+      }
+
+      const sermon = await storage.getSermon(req.params.id);
+      if (!sermon) {
+        return res.status(404).json({ error: "Sermon not found" });
+      }
+
+      const existingLike = await storage.getLike(req.params.id, visitorId);
+      if (existingLike) {
+        // Unlike
+        await storage.deleteLike(req.params.id, visitorId);
+        await storage.decrementSermonLikeCount(req.params.id);
+        res.json({ liked: false, likeCount: Math.max((sermon.likeCount || 0) - 1, 0) });
+      } else {
+        // Like
+        await storage.createLike({ sermonId: req.params.id, visitorId });
+        await storage.incrementSermonLikeCount(req.params.id);
+        res.json({ liked: true, likeCount: (sermon.likeCount || 0) + 1 });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to toggle like" });
+    }
+  });
+
+  // Get approved comments for a sermon
+  app.get("/api/sermons/:id/comments", async (req: Request, res: Response) => {
+    try {
+      const comments = await storage.getSermonComments(req.params.id, true);
+      res.json(comments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch comments" });
+    }
+  });
+
+  // Submit a new comment (requires moderation)
+  app.post("/api/sermons/:id/comments", async (req: Request, res: Response) => {
+    try {
+      const { authorName, authorEmail, content } = req.body;
+
+      if (!authorName || !content) {
+        return res.status(400).json({ error: "Name and comment are required" });
+      }
+
+      const sermon = await storage.getSermon(req.params.id);
+      if (!sermon) {
+        return res.status(404).json({ error: "Sermon not found" });
+      }
+
+      const commentData = {
+        sermonId: req.params.id,
+        authorName,
+        authorEmail: authorEmail || null,
+        content,
+      };
+
+      const result = insertCommentSchema.safeParse(commentData);
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid comment data", details: result.error });
+      }
+
+      const comment = await storage.createComment(result.data);
+      res.status(201).json({
+        message: "Comment submitted for moderation",
+        comment
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to submit comment" });
+    }
+  });
+
+  // Admin: Get all pending comments
+  app.get("/api/admin/comments/pending", async (req: Request, res: Response) => {
+    try {
+      const comments = await storage.getAllPendingComments();
+      res.json(comments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch pending comments" });
+    }
+  });
+
+  // Admin: Approve a comment
+  app.put("/api/admin/comments/:id/approve", async (req: Request, res: Response) => {
+    try {
+      const comment = await storage.approveComment(req.params.id);
+      if (!comment) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+      res.json(comment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to approve comment" });
+    }
+  });
+
+  // Admin: Delete a comment
+  app.delete("/api/admin/comments/:id", async (req: Request, res: Response) => {
+    try {
+      const success = await storage.deleteComment(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+      res.json({ message: "Comment deleted" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete comment" });
     }
   });
 

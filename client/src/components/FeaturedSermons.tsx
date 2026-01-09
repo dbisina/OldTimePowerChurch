@@ -70,15 +70,15 @@ export function FeaturedSermons() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-2">
-              Recent Sermons
+              Recent Scripture Teachings
             </h2>
             <p className="text-muted-foreground">
               Watch our latest messages and be encouraged in your faith.
             </p>
           </div>
-          <Link href="/sermons">
+          <Link href="/scriptures">
             <Button variant="ghost" className="text-primary" data-testid="button-view-all-sermons">
-              View All Sermons
+              View All Teachings
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>

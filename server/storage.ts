@@ -4,10 +4,12 @@ import {
   type Announcement, type InsertAnnouncement,
   type Subscriber, type InsertSubscriber,
   type WorshipPrayer, type InsertWorshipPrayer,
-  users, sermons, announcements, subscribers, worshipPrayer
+  type Comment, type InsertComment,
+  type Like, type InsertLike,
+  users, sermons, announcements, subscribers, worshipPrayer, comments, likes
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, lte, gt, or, isNull } from "drizzle-orm";
+import { eq, desc, and, lte, gt, or, isNull, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -28,6 +30,7 @@ export interface IStorage {
   createSermon(sermon: InsertSermon): Promise<Sermon>;
   updateSermon(id: string, data: Partial<InsertSermon>): Promise<Sermon | undefined>;
   deleteSermon(id: string): Promise<boolean>;
+  incrementSermonViewCount(id: string): Promise<void>;
 
   // Announcement operations
   getAnnouncement(id: string): Promise<Announcement | undefined>;
@@ -55,6 +58,21 @@ export interface IStorage {
   createWorshipPrayer(item: InsertWorshipPrayer): Promise<WorshipPrayer>;
   updateWorshipPrayer(id: string, data: Partial<InsertWorshipPrayer>): Promise<WorshipPrayer | undefined>;
   deleteWorshipPrayer(id: string): Promise<boolean>;
+
+  // Comment operations
+  getComment(id: string): Promise<Comment | undefined>;
+  getSermonComments(sermonId: string, onlyApproved?: boolean): Promise<Comment[]>;
+  getAllPendingComments(): Promise<Comment[]>;
+  createComment(comment: InsertComment): Promise<Comment>;
+  approveComment(id: string): Promise<Comment | undefined>;
+  deleteComment(id: string): Promise<boolean>;
+
+  // Like operations
+  getLike(sermonId: string, visitorId: string): Promise<Like | undefined>;
+  createLike(like: InsertLike): Promise<Like>;
+  deleteLike(sermonId: string, visitorId: string): Promise<boolean>;
+  incrementSermonLikeCount(sermonId: string): Promise<void>;
+  decrementSermonLikeCount(sermonId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -132,6 +150,12 @@ export class DatabaseStorage implements IStorage {
   async deleteSermon(id: string): Promise<boolean> {
     const result = await db.delete(sermons).where(eq(sermons.id, id)).returning();
     return result.length > 0;
+  }
+
+  async incrementSermonViewCount(id: string): Promise<void> {
+    await db.update(sermons)
+      .set({ viewCount: sql`COALESCE(${sermons.viewCount}, 0) + 1` })
+      .where(eq(sermons.id, id));
   }
 
   // Announcement operations
@@ -268,6 +292,91 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(worshipPrayer).where(eq(worshipPrayer.id, id)).returning();
     return result.length > 0;
   }
+
+  // Comment operations
+  async getComment(id: string): Promise<Comment | undefined> {
+    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
+    return comment;
+  }
+
+  async getSermonComments(sermonId: string, onlyApproved = true): Promise<Comment[]> {
+    if (onlyApproved) {
+      return db.select().from(comments)
+        .where(and(eq(comments.sermonId, sermonId), eq(comments.approved, true)))
+        .orderBy(desc(comments.createdAt));
+    }
+    return db.select().from(comments)
+      .where(eq(comments.sermonId, sermonId))
+      .orderBy(desc(comments.createdAt));
+  }
+
+  async getAllPendingComments(): Promise<Comment[]> {
+    return db.select().from(comments)
+      .where(eq(comments.approved, false))
+      .orderBy(desc(comments.createdAt));
+  }
+
+  async createComment(insertComment: InsertComment): Promise<Comment> {
+    const [comment] = await db.insert(comments).values(insertComment).returning();
+    // Increment comment count on sermon
+    await db.update(sermons)
+      .set({ commentCount: sql`COALESCE(${sermons.commentCount}, 0) + 1` })
+      .where(eq(sermons.id, insertComment.sermonId));
+    return comment;
+  }
+
+  async approveComment(id: string): Promise<Comment | undefined> {
+    const [comment] = await db.update(comments)
+      .set({ approved: true })
+      .where(eq(comments.id, id))
+      .returning();
+    return comment;
+  }
+
+  async deleteComment(id: string): Promise<boolean> {
+    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
+    if (comment) {
+      await db.delete(comments).where(eq(comments.id, id));
+      // Decrement comment count on sermon
+      await db.update(sermons)
+        .set({ commentCount: sql`GREATEST(COALESCE(${sermons.commentCount}, 0) - 1, 0)` })
+        .where(eq(sermons.id, comment.sermonId));
+      return true;
+    }
+    return false;
+  }
+
+  // Like operations
+  async getLike(sermonId: string, visitorId: string): Promise<Like | undefined> {
+    const [like] = await db.select().from(likes)
+      .where(and(eq(likes.sermonId, sermonId), eq(likes.visitorId, visitorId)));
+    return like;
+  }
+
+  async createLike(insertLike: InsertLike): Promise<Like> {
+    const [like] = await db.insert(likes).values(insertLike).returning();
+    return like;
+  }
+
+  async deleteLike(sermonId: string, visitorId: string): Promise<boolean> {
+    const result = await db.delete(likes)
+      .where(and(eq(likes.sermonId, sermonId), eq(likes.visitorId, visitorId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async incrementSermonLikeCount(sermonId: string): Promise<void> {
+    await db.update(sermons)
+      .set({ likeCount: sql`COALESCE(${sermons.likeCount}, 0) + 1` })
+      .where(eq(sermons.id, sermonId));
+  }
+
+  async decrementSermonLikeCount(sermonId: string): Promise<void> {
+    await db.update(sermons)
+      .set({ likeCount: sql`GREATEST(COALESCE(${sermons.likeCount}, 0) - 1, 0)` })
+      .where(eq(sermons.id, sermonId));
+  }
 }
 
 export const storage = new DatabaseStorage();
+

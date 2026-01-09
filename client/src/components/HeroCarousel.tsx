@@ -30,7 +30,7 @@ export function HeroCarousel({ onConnectClick }: HeroCarouselProps) {
       headline: "Old Time Revival — Preparing the Way for the Lord",
       subheadline: "Awake the church. Ignite revival. Encounter His presence.",
       ctaPrimary: { text: "Join a Service", href: "#services" },
-      ctaSecondary: { text: "Watch Latest Sermon", href: "/sermons" },
+      ctaSecondary: { text: "Watch Latest Teaching", href: "/scriptures" },
     },
     {
       image: heroSlide2,

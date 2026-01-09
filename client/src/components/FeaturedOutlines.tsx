@@ -70,7 +70,7 @@ export function FeaturedOutlines() {
               Deep dive into scripture with our latest teaching outlines.
             </p>
           </div>
-          <Link href="/sermons?tab=scriptures">
+          <Link href="/scriptures?tab=scriptures">
             <Button variant="ghost" className="text-primary">
               View All Studies
               <ArrowRight className="h-4 w-4 ml-2" />
@@ -80,7 +80,7 @@ export function FeaturedOutlines() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {outlines.map((outline) => (
-            <Link key={outline.id} href={`/sermons/${outline.id}`}>
+            <Link key={outline.id} href={`/scriptures/${outline.id}`}>
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-all border-primary/20 hover:border-primary/50 group"
               >

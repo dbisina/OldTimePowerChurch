@@ -50,7 +50,7 @@ export function Footer() {
             <ul className="space-y-2">
               {[
                 { label: "Home", href: "/" },
-                { label: "Sermons", href: "/sermons" },
+                { label: "Scripture Teachings", href: "/scriptures" },
                 { label: "About Us", href: "/about" },
                 { label: "Contact", href: "/contact" },
                 { label: "Announcements", href: "/announcements" },

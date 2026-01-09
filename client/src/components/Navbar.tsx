@@ -6,7 +6,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "Sermons", href: "/sermons" },
+  { label: "Scripture Teachings", href: "/scriptures" },
   { label: "About Us", href: "/about" },
   { label: "Contact", href: "/contact" },
   { label: "Announcements", href: "/announcements" },
