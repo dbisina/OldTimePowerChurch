@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 import { type Sermon, type Announcement, type Subscriber } from '@shared/schema';
 
 if (!process.env.RESEND_API_KEY) {
-    console.warn("Missing RESEND_API_KEY environment variable. Email features will be disabled.");
+  console.warn("Missing RESEND_API_KEY environment variable. Email features will be disabled.");
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_123');
@@ -12,30 +12,30 @@ const TEST_FROM_EMAIL = 'onboarding@resend.dev';
 
 // Helper to determine which email to use
 const getFromEmail = () => {
-    return process.env.NODE_ENV === 'production' ? FROM_EMAIL : TEST_FROM_EMAIL;
+  return process.env.NODE_ENV === 'production' ? FROM_EMAIL : TEST_FROM_EMAIL;
 };
 
 export class EmailService {
-    async sendNewSermonNotification(sermon: Sermon, subscribers: Subscriber[]) {
-        if (!process.env.RESEND_API_KEY) return false;
+  async sendNewSermonNotification(sermon: Sermon, subscribers: Subscriber[]) {
+    if (!process.env.RESEND_API_KEY) return false;
 
-        // Filter active subscribers
-        const activeSubscribers = subscribers.filter(s => s.status === 'active');
+    // Filter active subscribers
+    const activeSubscribers = subscribers.filter(s => s.status === 'active');
 
-        if (activeSubscribers.length === 0) return true;
+    if (activeSubscribers.length === 0) return true;
 
-        // Send in batches to avoid rate limits if list is huge (not needed for small lists)
-        try {
-            // For now, we'll send individually to personalize the unsubscribe link
-            // In production with large lists, you'd use Broadcasts or Audiences
-            const emailPromises = activeSubscribers.map(subscriber => {
-                const unsubscribeLink = `${process.env.App_URL || 'http://localhost:5000'}/api/unsubscribe/${subscriber.unsubscribeToken}`;
+    // Send in batches to avoid rate limits if list is huge (not needed for small lists)
+    try {
+      // For now, we'll send individually to personalize the unsubscribe link
+      // In production with large lists, you'd use Broadcasts or Audiences
+      const emailPromises = activeSubscribers.map(subscriber => {
+        const unsubscribeLink = `${process.env.App_URL || 'http://localhost:5000'}/api/unsubscribe/${subscriber.unsubscribeToken}`;
 
-                return resend.emails.send({
-                    from: getFromEmail(),
-                    to: subscriber.email,
-                    subject: `New Sermon: ${sermon.title}`,
-                    html: `
+        return resend.emails.send({
+          from: getFromEmail(),
+          to: subscriber.email,
+          subject: `New Sermon: ${sermon.title}`,
+          html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h1>New Sermon Available</h1>
               <h2>${sermon.title}</h2>
@@ -58,33 +58,33 @@ export class EmailService {
               </p>
             </div>
           `
-                });
-            });
+        });
+      });
 
-            await Promise.all(emailPromises);
-            console.log(`Sent new sermon notification to ${activeSubscribers.length} subscribers`);
-            return true;
-        } catch (error) {
-            console.error("Failed to send sermon emails:", error);
-            return false;
-        }
+      await Promise.all(emailPromises);
+      console.log(`Sent new sermon notification to ${activeSubscribers.length} subscribers`);
+      return true;
+    } catch (error) {
+      console.error("Failed to send sermon emails:", error);
+      return false;
     }
+  }
 
-    async sendNewAnnouncementNotification(announcement: Announcement, subscribers: Subscriber[]) {
-        if (!process.env.RESEND_API_KEY) return false;
+  async sendNewAnnouncementNotification(announcement: Announcement, subscribers: Subscriber[]) {
+    if (!process.env.RESEND_API_KEY) return false;
 
-        const activeSubscribers = subscribers.filter(s => s.status === 'active');
-        if (activeSubscribers.length === 0) return true;
+    const activeSubscribers = subscribers.filter(s => s.status === 'active');
+    if (activeSubscribers.length === 0) return true;
 
-        try {
-            const emailPromises = activeSubscribers.map(subscriber => {
-                const unsubscribeLink = `${process.env.App_URL || 'http://localhost:5000'}/api/unsubscribe/${subscriber.unsubscribeToken}`;
+    try {
+      const emailPromises = activeSubscribers.map(subscriber => {
+        const unsubscribeLink = `${process.env.App_URL || 'http://localhost:5000'}/api/unsubscribe/${subscriber.unsubscribeToken}`;
 
-                return resend.emails.send({
-                    from: getFromEmail(),
-                    to: subscriber.email,
-                    subject: `New Announcement: ${announcement.title}`,
-                    html: `
+        return resend.emails.send({
+          from: getFromEmail(),
+          to: subscriber.email,
+          subject: `New Announcement: ${announcement.title}`,
+          html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h1>New Announcement</h1>
               <h2>${announcement.title}</h2>
@@ -105,29 +105,29 @@ export class EmailService {
               </p>
             </div>
           `
-                });
-            });
+        });
+      });
 
-            await Promise.all(emailPromises);
-            console.log(`Sent new announcement notification to ${activeSubscribers.length} subscribers`);
-            return true;
-        } catch (error) {
-            console.error("Failed to send announcement emails:", error);
-            return false;
-        }
+      await Promise.all(emailPromises);
+      console.log(`Sent new announcement notification to ${activeSubscribers.length} subscribers`);
+      return true;
+    } catch (error) {
+      console.error("Failed to send announcement emails:", error);
+      return false;
     }
+  }
 
-    async sendWelcomeEmail(subscriber: Subscriber) {
-        if (!process.env.RESEND_API_KEY) return false;
+  async sendWelcomeEmail(subscriber: Subscriber) {
+    if (!process.env.RESEND_API_KEY) return false;
 
-        try {
-            const unsubscribeLink = `${process.env.App_URL || 'http://localhost:5000'}/api/unsubscribe/${subscriber.unsubscribeToken}`;
+    try {
+      const unsubscribeLink = `${process.env.App_URL || 'http://localhost:5000'}/api/unsubscribe/${subscriber.unsubscribeToken}`;
 
-            await resend.emails.send({
-                from: getFromEmail(),
-                to: subscriber.email,
-                subject: "Welcome to Old Time Power Church Updates",
-                html: `
+      await resend.emails.send({
+        from: getFromEmail(),
+        to: subscriber.email,
+        subject: "Welcome to Old Time Power Church Updates",
+        html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h1>Welcome, ${subscriber.name}!</h1>
             <p>Thank you for subscribing to updates from Old Time Power Church. You will now receive notifications when we post new sermons or important announcements.</p>
@@ -142,13 +142,49 @@ export class EmailService {
             </p>
           </div>
         `
-            });
-            return true;
-        } catch (error) {
-            console.error("Failed to send welcome email:", error);
-            return false;
-        }
+      });
+      return true;
+    } catch (error) {
+      console.error("Failed to send welcome email:", error);
+      return false;
     }
+  }
+
+  async sendAdminCommentNotification(comment: any, sermon: Sermon) {
+    if (!process.env.RESEND_API_KEY) return false;
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'info@otpchurch.org';
+
+    try {
+      await resend.emails.send({
+        from: getFromEmail(),
+        to: adminEmail,
+        subject: `New Comment on "${sermon.title}"`,
+        html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h1>New Comment Pending Approval</h1>
+                        <p><strong>From:</strong> ${comment.authorName} ${comment.authorEmail ? `(${comment.authorEmail})` : ''}</p>
+                        <p><strong>Sermon:</strong> ${sermon.title}</p>
+                        
+                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                            ${comment.content}
+                        </div>
+                        
+                        <p>Please log in to the admin dashboard to approve or delete this comment.</p>
+                        
+                        <div style="margin: 30px 0;">
+                            <a href="${process.env.App_URL || 'http://localhost:5000'}/admin" style="background-color: #b5621b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Go to Admin Dashboard</a>
+                        </div>
+                    </div>
+                `
+      });
+      console.log(`Sent admin notification for new comment on ${sermon.id}`);
+      return true;
+    } catch (error) {
+      console.error("Failed to send admin comment notification:", error);
+      return false;
+    }
+  }
 }
 
 export const emailService = new EmailService();

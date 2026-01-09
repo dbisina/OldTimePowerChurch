@@ -925,7 +925,7 @@ export async function registerRoutes(
       }
 
       const commentData = {
-        sermonId: req.params.id,
+        sermonId: sermon.id,
         authorName,
         authorEmail: authorEmail || null,
         content,
@@ -937,6 +937,14 @@ export async function registerRoutes(
       }
 
       const comment = await storage.createComment(result.data);
+
+      // Send notification to admin
+      try {
+        await emailService.sendAdminCommentNotification(result.data, sermon);
+      } catch (emailError) {
+        console.error("Failed to trigger admin comment notification:", emailError);
+      }
+
       res.status(201).json({
         message: "Comment submitted for moderation",
         comment

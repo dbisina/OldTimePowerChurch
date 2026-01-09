@@ -997,6 +997,18 @@ export default function AdminDashboardPage() {
               <span>Analytics</span>
             </TabsTrigger>
             <TabsTrigger
+              value="comments"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>Comments</span>
+              {pendingComments.length > 0 && (
+                <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full ml-1">
+                  {pendingComments.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
               value="settings"
               className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
             >
@@ -2131,71 +2143,9 @@ export default function AdminDashboardPage() {
                   </Card>
                 </div>
 
-                {/* Pending Comments Moderation */}
-                <Card className="border-border border-l-4 border-l-yellow-500">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageCircle className="h-5 w-5 text-yellow-500" />
-                      Pending Comments ({pendingComments.length})
-                    </CardTitle>
-                    <CardDescription>Review and approve user comments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {pendingComments.length > 0 ? (
-                      <div className="space-y-4">
-                        {pendingComments.map((comment) => (
-                          <div key={comment.id} className="flex flex-col md:flex-row gap-4 p-4 bg-muted/20 rounded-lg border border-border">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-bold text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                  {comment.authorName}
-                                </span>
-                                {comment.authorEmail && (
-                                  <span className="text-xs text-muted-foreground">&lt;{comment.authorEmail}&gt;</span>
-                                )}
-                                <span className="text-xs text-muted-foreground ml-auto">
-                                  {new Date(comment.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="text-sm italic text-muted-foreground mb-2">
-                                on Sermon ID: {comment.sermonId}
-                              </p>
-                              <p className="text-sm bg-background p-3 rounded border border-border">
-                                {comment.content}
-                              </p>
-                            </div>
-                            <div className="flex md:flex-col gap-2 justify-center">
-                              <Button 
-                                size="sm" 
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                                onClick={() => handleApproveComment(comment.id)}
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Approve
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => handleDeleteComment(comment.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-6 text-center">
-                        <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
-                        <p className="font-medium">All caught up!</p>
-                        <p className="text-sm text-muted-foreground">No pending comments to review.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
 
-                {/* Two Column Layout */}
+
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Top Pages */}
                   <Card className="border-border">
@@ -2315,6 +2265,75 @@ export default function AdminDashboardPage() {
                 </Card>
               </>
             )}
+          </TabsContent>
+
+          {/* Comments Tab */}
+          <TabsContent value="comments" className="mt-0 space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground">Comment Moderation</h2>
+              <p className="text-muted-foreground mt-1">Review and approve pending comments</p>
+            </div>
+          
+            {/* Pending Comments Moderation */}
+            <Card className="border-border border-l-4 border-l-yellow-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-yellow-500" />
+                  Pending Comments ({pendingComments.length})
+                </CardTitle>
+                <CardDescription>Review and approve user comments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingComments.length > 0 ? (
+                  <div className="space-y-4">
+                    {pendingComments.map((comment) => (
+                      <div key={comment.id} className="flex flex-col md:flex-row gap-4 p-4 bg-muted/20 rounded-lg border border-border">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-bold text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
+                              {comment.authorName}
+                            </span>
+                            {comment.authorEmail && (
+                              <span className="text-xs text-muted-foreground">&lt;{comment.authorEmail}&gt;</span>
+                            )}
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {new Date(comment.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm italic text-muted-foreground mb-2">
+                            on Sermon ID: {comment.sermonId}
+                          </p>
+                          <p className="text-sm bg-background p-3 rounded border border-border">
+                            {comment.content}
+                          </p>
+                        </div>
+                        <div className="flex md:flex-col gap-2 justify-center">
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => handleApproveComment(comment.id)}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleDeleteComment(comment.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p>No pending comments to review.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
