@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -40,6 +41,7 @@ import {
   Edit2,
   Trash2,
   BarChart3,
+  Activity,
   Mail,
   Calendar,
   Video,
@@ -118,6 +120,7 @@ interface Stats {
   activeAnnouncements: number;
   totalSubscribers: number;
   activeSubscribers: number;
+  engagementRate: number;
 }
 
 interface AnalyticsData {
@@ -133,6 +136,16 @@ interface SermonAnalytics {
   viewCount: number;
   likeCount: number;
   commentCount: number;
+}
+
+interface Comment {
+  id: string;
+  sermonId: string;
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  createdAt: string;
+  approved: boolean;
 }
 
 // Helper to extract YouTube video ID
@@ -175,6 +188,7 @@ export default function AdminDashboardPage() {
   const [worshipPrayerItems, setWorshipPrayerItems] = useState<WorshipPrayer[]>([]);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [sermonAnalytics, setSermonAnalytics] = useState<SermonAnalytics[]>([]);
+  const [pendingComments, setPendingComments] = useState<Comment[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Dialog states
@@ -327,10 +341,64 @@ export default function AdminDashboardPage() {
         const data = await sermonAnalyticsRes.json();
         setSermonAnalytics(data);
       }
+      
+      // Fetch pending comments
+      fetchPendingComments();
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
     } finally {
       setAnalyticsLoading(false);
+    }
+  };
+
+  const fetchPendingComments = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await fetch("/api/admin/comments/pending", { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingComments(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending comments:", error);
+    }
+  };
+
+  const handleApproveComment = async (id: string) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await fetch(`/api/admin/comments/${id}/approve`, {
+        method: "PUT",
+        headers
+      });
+      if (res.ok) {
+        toast({ title: "Comment approved" });
+        fetchPendingComments();
+        // Refresh analytics to updatecounts
+        fetch("/api/admin/analytics/sermons", { headers })
+          .then(res => res.json())
+          .then(data => setSermonAnalytics(data));
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to approve comment", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+    
+    try {
+      const headers = getAuthHeaders();
+      const res = await fetch(`/api/admin/comments/${id}`, {
+        method: "DELETE",
+        headers
+      });
+      if (res.ok) {
+        toast({ title: "Comment deleted" });
+        fetchPendingComments();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete comment", variant: "destructive" });
     }
   };
 
@@ -359,6 +427,8 @@ export default function AdminDashboardPage() {
       scriptures: "",
       tags: "",
       type: "video",
+      // @ts-ignore
+      sendEmail: true
     });
     setSermonDialogOpen(true);
   };
@@ -1161,7 +1231,25 @@ export default function AdminDashboardPage() {
                           </Button>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      
+                      {/* Send Email Checkbox */}
+                      {!editingSermon && (
+                        <div className="flex items-center space-x-2 bg-muted/20 p-4 rounded-lg border border-border">
+                          <Checkbox 
+                            id="sendEmail" 
+                            // @ts-ignore
+                            checked={sermonForm.sendEmail}
+                            // @ts-ignore
+                            onCheckedChange={(checked) => setSermonForm({...sermonForm, sendEmail: !!checked})}
+                          />
+                          <Label htmlFor="sendEmail" className="font-medium cursor-pointer">
+                            Send email notification to subscribers
+                          </Label>
+                        </div>
+                      )}
+
+
+                      <p className="text-xs text-muted-foreground mt-4">
                         Upload a document to automatically extract the outline text. Only PDF and DOCX files are supported.
                       </p>
                       
@@ -1922,7 +2010,6 @@ export default function AdminDashboardPage() {
                   <div>
                     <Label className="text-foreground mb-2 block">Church Name</Label>
                     <Input
-                      defaultValue="Old Time Power Church"
                       className="bg-background/50 border-border focus:border-primary text-foreground"
                     />
                   </div>
@@ -2025,7 +2112,88 @@ export default function AdminDashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  <Card className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-500/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Activity className="h-4 w-4" />
+                        Interactive Engagement
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                        {analyticsData?.uniqueVisitors ? Math.min(100, Math.round(((sermonAnalytics.reduce((sum, s) => sum + s.likeCount + s.commentCount, 0)) / analyticsData.uniqueVisitors) * 100)) : 0}%
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        (Likes + Comments) / Unique Visitors
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
+
+                {/* Pending Comments Moderation */}
+                <Card className="border-border border-l-4 border-l-yellow-500">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5 text-yellow-500" />
+                      Pending Comments ({pendingComments.length})
+                    </CardTitle>
+                    <CardDescription>Review and approve user comments</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {pendingComments.length > 0 ? (
+                      <div className="space-y-4">
+                        {pendingComments.map((comment) => (
+                          <div key={comment.id} className="flex flex-col md:flex-row gap-4 p-4 bg-muted/20 rounded-lg border border-border">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-bold text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                  {comment.authorName}
+                                </span>
+                                {comment.authorEmail && (
+                                  <span className="text-xs text-muted-foreground">&lt;{comment.authorEmail}&gt;</span>
+                                )}
+                                <span className="text-xs text-muted-foreground ml-auto">
+                                  {new Date(comment.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-sm italic text-muted-foreground mb-2">
+                                on Sermon ID: {comment.sermonId}
+                              </p>
+                              <p className="text-sm bg-background p-3 rounded border border-border">
+                                {comment.content}
+                              </p>
+                            </div>
+                            <div className="flex md:flex-col gap-2 justify-center">
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handleApproveComment(comment.id)}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Approve
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleDeleteComment(comment.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 text-center">
+                        <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                        <p className="font-medium">All caught up!</p>
+                        <p className="text-sm text-muted-foreground">No pending comments to review.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

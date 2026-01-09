@@ -15,7 +15,7 @@ import mammoth from "mammoth";
 import { v2 as cloudinary } from "cloudinary";
 // @ts-ignore - pdf-parse is a CommonJS module
 import pdf from "pdf-parse";
-import nodemailer from "nodemailer";
+import { emailService } from "./email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
@@ -26,16 +26,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configure Nodemailer
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+
+// Removed Nodemailer config in favor of Resend service
+
 
 /**
  * Generate a URL-friendly slug from a title string
@@ -494,8 +487,24 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid sermon data", details: result.error });
       }
 
-      const sermon = await storage.createSermon(result.data);
-      res.status(201).json(sermon);
+      const newSermon = await storage.createSermon({
+        ...result.data,
+        slug,
+        createdBy: null
+      });
+
+      // Send email notification if enabled in request or setting
+      // The frontend doesn't usually send a flag, so we default to true for new sermons
+      // Or you can add a checkbox in the UI
+      try {
+        const subscribers = await storage.getAllSubscribers();
+        await emailService.sendNewSermonNotification(newSermon, subscribers);
+      } catch (emailError) {
+        console.error("Failed to trigger email notification:", emailError);
+        // Don't fail the request just because email failed
+      }
+
+      res.status(201).json(newSermon);
     } catch (error) {
       console.error("Create sermon error:", error);
       res.status(500).json({ error: "Failed to create sermon" });
@@ -577,35 +586,19 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid announcement data", details: result.error });
       }
 
-      const announcement = await storage.createAnnouncement(result.data);
+      const newAnnouncement = await storage.createAnnouncement(result.data);
 
-      // Send email if requested
+      // Send email notification if "sendEmail" flag is true
       if (req.body.sendEmail) {
-        const subscribers = await storage.getActiveSubscribers();
-        const emails = subscribers.map(s => s.email);
-
-        if (emails.length > 0) {
-          try {
-            await transporter.sendMail({
-              from: `"Old Time Power Church" <${process.env.SMTP_USER}>`,
-              to: process.env.SMTP_USER, // Send to self, bcc everyone else
-              bcc: emails,
-              subject: announcement.title,
-              html: `
-                <h1>${announcement.title}</h1>
-                ${announcement.graphicUrl ? `<img src="${announcement.graphicUrl}" alt="${announcement.title}" style="max-width: 100%;" />` : ''}
-                <div>${announcement.contentHtml || ''}</div>
-                <p><a href="${process.env.APP_URL}/announcements/${announcement.slug}">View on website</a></p>
-              `,
-            });
-          } catch (e) {
-            console.error("Failed to send email:", e);
-            // Don't fail the request if email fails
-          }
+        try {
+          const subscribers = await storage.getAllSubscribers();
+          await emailService.sendNewAnnouncementNotification(newAnnouncement, subscribers);
+        } catch (emailError) {
+          console.error("Failed to trigger announcement email:", emailError);
         }
       }
 
-      res.status(201).json(announcement);
+      res.status(201).json(newAnnouncement);
     } catch (error) {
       res.status(500).json({ error: "Failed to create announcement" });
     }
@@ -663,9 +656,42 @@ export async function registerRoutes(
       }
 
       const subscriber = await storage.createSubscriber(result.data);
+      // Send welcome email
+      await emailService.sendWelcomeEmail(subscriber);
+
       res.status(201).json(subscriber);
     } catch (error) {
-      res.status(500).json({ error: "Failed to create subscriber" });
+      if ((error as any).code === '23505') { // Postgres unique constraint violation code
+        return res.status(409).json({ error: "Email already subscribed" });
+      }
+      res.status(500).json({ error: "Failed to subscribe" });
+    }
+  });
+
+  // Unsubscribe route
+  app.get("/api/unsubscribe/:token", async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      if (!token) {
+        return res.status(400).send("Invalid unsubscribe link");
+      }
+
+      const success = await storage.unsubscribeByToken(token);
+      if (success) {
+        res.send(`
+          <html>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+              <h1>Unsubscribed</h1>
+              <p>You have been successfully unsubscribed from our updates.</p>
+              <a href="/">Return to Home</a>
+            </body>
+          </html>
+        `);
+      } else {
+        res.status(404).send("Subscription not found or already unsubscribed");
+      }
+    } catch (error) {
+      res.status(500).send("Failed to unsubscribe");
     }
   });
 
@@ -791,11 +817,15 @@ export async function registerRoutes(
   // Track sermon view
   app.post("/api/sermons/:id/view", async (req: Request, res: Response) => {
     try {
-      const sermon = await storage.getSermon(req.params.id);
+      // Try to find by slug first, then by ID
+      let sermon = await storage.getSermonBySlug(req.params.id);
+      if (!sermon) {
+        sermon = await storage.getSermon(req.params.id);
+      }
       if (!sermon) {
         return res.status(404).json({ error: "Sermon not found" });
       }
-      await storage.incrementSermonViewCount(req.params.id);
+      await storage.incrementSermonViewCount(sermon.id);
       res.json({ success: true, viewCount: (sermon.viewCount || 0) + 1 });
     } catch (error) {
       res.status(500).json({ error: "Failed to track view" });
@@ -809,7 +839,15 @@ export async function registerRoutes(
       if (!visitorId) {
         return res.json({ liked: false });
       }
-      const like = await storage.getLike(req.params.id, visitorId);
+      // Try to find by slug first, then by ID
+      let sermon = await storage.getSermonBySlug(req.params.id);
+      if (!sermon) {
+        sermon = await storage.getSermon(req.params.id);
+      }
+      if (!sermon) {
+        return res.json({ liked: false });
+      }
+      const like = await storage.getLike(sermon.id, visitorId);
       res.json({ liked: !!like });
     } catch (error) {
       res.status(500).json({ error: "Failed to check like status" });
@@ -824,21 +862,25 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Visitor ID required" });
       }
 
-      const sermon = await storage.getSermon(req.params.id);
+      // Try to find by slug first, then by ID
+      let sermon = await storage.getSermonBySlug(req.params.id);
+      if (!sermon) {
+        sermon = await storage.getSermon(req.params.id);
+      }
       if (!sermon) {
         return res.status(404).json({ error: "Sermon not found" });
       }
 
-      const existingLike = await storage.getLike(req.params.id, visitorId);
+      const existingLike = await storage.getLike(sermon.id, visitorId);
       if (existingLike) {
         // Unlike
-        await storage.deleteLike(req.params.id, visitorId);
-        await storage.decrementSermonLikeCount(req.params.id);
+        await storage.deleteLike(sermon.id, visitorId);
+        await storage.decrementSermonLikeCount(sermon.id);
         res.json({ liked: false, likeCount: Math.max((sermon.likeCount || 0) - 1, 0) });
       } else {
         // Like
-        await storage.createLike({ sermonId: req.params.id, visitorId });
-        await storage.incrementSermonLikeCount(req.params.id);
+        await storage.createLike({ sermonId: sermon.id, visitorId });
+        await storage.incrementSermonLikeCount(sermon.id);
         res.json({ liked: true, likeCount: (sermon.likeCount || 0) + 1 });
       }
     } catch (error) {
@@ -849,7 +891,15 @@ export async function registerRoutes(
   // Get approved comments for a sermon
   app.get("/api/sermons/:id/comments", async (req: Request, res: Response) => {
     try {
-      const comments = await storage.getSermonComments(req.params.id, true);
+      // Try to find by slug first, then by ID
+      let sermon = await storage.getSermonBySlug(req.params.id);
+      if (!sermon) {
+        sermon = await storage.getSermon(req.params.id);
+      }
+      if (!sermon) {
+        return res.json([]);
+      }
+      const comments = await storage.getSermonComments(sermon.id, true);
       res.json(comments);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch comments" });
@@ -865,7 +915,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Name and comment are required" });
       }
 
-      const sermon = await storage.getSermon(req.params.id);
+      // Try to find by slug first, then by ID
+      let sermon = await storage.getSermonBySlug(req.params.id);
+      if (!sermon) {
+        sermon = await storage.getSermon(req.params.id);
+      }
       if (!sermon) {
         return res.status(404).json({ error: "Sermon not found" });
       }

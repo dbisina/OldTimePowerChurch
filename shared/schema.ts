@@ -104,6 +104,7 @@ export const subscribers = pgTable("subscribers", {
   tags: text("tags").array(),
   preferredServiceDay: text("preferred_service_day"),
   status: text("status").notNull().default("active"), // active, unsubscribed
+  unsubscribeToken: varchar("unsubscribe_token").default(sql`gen_random_uuid()`),
   subscribedAt: timestamp("subscribed_at").defaultNow(),
   unsubscribedAt: timestamp("unsubscribed_at"),
 });

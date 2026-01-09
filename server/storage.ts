@@ -51,6 +51,7 @@ export interface IStorage {
   createSubscriber(subscriber: InsertSubscriber): Promise<Subscriber>;
   updateSubscriber(id: string, data: Partial<InsertSubscriber>): Promise<Subscriber | undefined>;
   deleteSubscriber(id: string): Promise<boolean>;
+  unsubscribeByToken(token: string): Promise<boolean>;
 
   // Worship/Prayer operations
   getWorshipPrayer(id: string): Promise<WorshipPrayer | undefined>;
@@ -275,8 +276,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSubscriber(id: string): Promise<boolean> {
-    const result = await db.delete(subscribers).where(eq(subscribers.id, id)).returning();
-    return result.length > 0;
+    const [deleted] = await db.delete(subscribers).where(eq(subscribers.id, id)).returning();
+    return !!deleted;
+  }
+
+  async unsubscribeByToken(token: string): Promise<boolean> {
+    const [subscriber] = await db
+      .update(subscribers)
+      .set({ status: 'unsubscribed', unsubscribedAt: new Date() })
+      .where(eq(subscribers.unsubscribeToken, token))
+      .returning();
+    return !!subscriber;
   }
 
   // Worship/Prayer operations
