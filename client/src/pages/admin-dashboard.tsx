@@ -55,6 +55,8 @@ import {
   Loader2,
   Music,
   MessageCircle,
+  Eye,
+  Heart,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -118,6 +120,21 @@ interface Stats {
   activeSubscribers: number;
 }
 
+interface AnalyticsData {
+  totalViews: number;
+  uniqueVisitors: number;
+  topPages: { pagePath: string; pageType: string; views: number }[];
+  viewsByDay: { date: string; views: number }[];
+}
+
+interface SermonAnalytics {
+  id: string;
+  title: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+}
+
 // Helper to extract YouTube video ID
 function extractYouTubeVideoId(url: string): string | null {
   const patterns = [
@@ -156,6 +173,9 @@ export default function AdminDashboardPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [worshipPrayerItems, setWorshipPrayerItems] = useState<WorshipPrayer[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [sermonAnalytics, setSermonAnalytics] = useState<SermonAnalytics[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Dialog states
   const [sermonDialogOpen, setSermonDialogOpen] = useState(false);
@@ -283,8 +303,34 @@ export default function AdminDashboardPage() {
         const data = await statsRes.json();
         setStats(data);
       }
+      // Fetch analytics data
+      fetchAnalytics();
     } catch (error) {
       toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const headers = getAuthHeaders();
+      const [analyticsRes, sermonAnalyticsRes] = await Promise.all([
+        fetch("/api/admin/analytics", { headers }),
+        fetch("/api/admin/analytics/sermons", { headers }),
+      ]);
+
+      if (analyticsRes.ok) {
+        const data = await analyticsRes.json();
+        setAnalyticsData(data);
+      }
+      if (sermonAnalyticsRes.ok) {
+        const data = await sermonAnalyticsRes.json();
+        setSermonAnalytics(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -872,6 +918,13 @@ export default function AdminDashboardPage() {
             >
               <Music className="h-4 w-4" />
               <span>Worship & Prayer</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Analytics</span>
             </TabsTrigger>
             <TabsTrigger
               value="settings"
@@ -1900,6 +1953,200 @@ export default function AdminDashboardPage() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="mt-0 space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground">Analytics Dashboard</h2>
+              <p className="text-muted-foreground mt-1">Track website traffic and content engagement</p>
+            </div>
+
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Traffic Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border-cyan-500/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        Total Page Views
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
+                        {analyticsData?.totalViews?.toLocaleString() || 0}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-500/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Unique Visitors
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                        {analyticsData?.uniqueVisitors?.toLocaleString() || 0}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-pink-500/10 to-red-500/5 border-pink-500/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Heart className="h-4 w-4" />
+                        Total Likes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-pink-600 dark:text-pink-400">
+                        {sermonAnalytics.reduce((sum, s) => sum + s.likeCount, 0).toLocaleString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4" />
+                        Total Comments
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                        {sermonAnalytics.reduce((sum, s) => sum + s.commentCount, 0).toLocaleString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Top Pages */}
+                  <Card className="border-border">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        Top Pages
+                      </CardTitle>
+                      <CardDescription>Most visited pages on your site</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {analyticsData?.topPages && analyticsData.topPages.length > 0 ? (
+                        <div className="space-y-3">
+                          {analyticsData.topPages.slice(0, 5).map((page, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-muted-foreground">#{i + 1}</span>
+                                <div>
+                                  <p className="text-sm font-medium truncate max-w-[200px]">{page.pagePath}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">{page.pageType}</p>
+                                </div>
+                              </div>
+                              <span className="text-sm font-bold text-primary">{page.views} views</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No page view data yet</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Views by Day */}
+                  <Card className="border-border">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-primary" />
+                        Recent Activity
+                      </CardTitle>
+                      <CardDescription>Page views over the last 7 days</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {analyticsData?.viewsByDay && analyticsData.viewsByDay.length > 0 ? (
+                        <div className="space-y-2">
+                          {analyticsData.viewsByDay.slice(0, 7).map((day, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground w-20">{day.date}</span>
+                              <div className="flex-1 h-6 bg-muted/30 rounded overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-primary/80 to-primary rounded"
+                                  style={{ 
+                                    width: `${Math.min(100, (day.views / Math.max(...analyticsData.viewsByDay.map(d => d.views))) * 100)}%` 
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium w-12 text-right">{day.views}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No activity data yet</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Sermon Engagement Table */}
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      Sermon Engagement
+                    </CardTitle>
+                    <CardDescription>Views, likes, and comments per sermon</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {sermonAnalytics.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Sermon Title</TableHead>
+                            <TableHead className="text-center">Views</TableHead>
+                            <TableHead className="text-center">Likes</TableHead>
+                            <TableHead className="text-center">Comments</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sermonAnalytics.slice(0, 10).map((sermon) => (
+                            <TableRow key={sermon.id}>
+                              <TableCell className="font-medium max-w-[300px] truncate">{sermon.title}</TableCell>
+                              <TableCell className="text-center">
+                                <span className="inline-flex items-center gap-1">
+                                  <Eye className="h-3 w-3 text-cyan-500" />
+                                  {sermon.viewCount}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="inline-flex items-center gap-1">
+                                  <Heart className="h-3 w-3 text-pink-500" />
+                                  {sermon.likeCount}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="inline-flex items-center gap-1">
+                                  <MessageCircle className="h-3 w-3 text-green-500" />
+                                  {sermon.commentCount}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">No sermon engagement data yet</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </div>
