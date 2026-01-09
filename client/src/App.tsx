@@ -55,31 +55,13 @@ function RedirectToAdmin() {
   );
 }
 
-// Redirect from old /sermons URLs to new /scriptures URLs
-function RedirectToScriptures() {
-  useEffect(() => {
-    const path = window.location.pathname;
-    const newPath = path.replace('/sermons', '/scriptures');
-    window.location.replace(newPath + window.location.search);
-  }, []);
-
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-pulse">Redirecting...</div>
-    </div>
-  );
-}
-
 // Public website routes
 function PublicRouter({ onConnectClick }: { onConnectClick: () => void }) {
   return (
     <Switch>
       <Route path="/" component={() => <HomePage onConnectClick={onConnectClick} />} />
-      <Route path="/scriptures" component={SermonsPage} />
-      <Route path="/scriptures/:slug" component={SermonDetailPage} />
-      {/* Redirects from old /sermons URLs for backward compatibility */}
-      <Route path="/sermons" component={RedirectToScriptures} />
-      <Route path="/sermons/:slug" component={RedirectToScriptures} />
+      <Route path="/sermons" component={SermonsPage} />
+      <Route path="/sermons/:slug" component={SermonDetailPage} />
       <Route path="/announcements" component={AnnouncementsPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/contact" component={ContactPage} />

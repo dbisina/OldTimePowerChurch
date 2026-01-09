@@ -35,7 +35,7 @@ export function SermonCard({
   const displayThumbnail = thumbnailUrl || thumbnail;
   
   return (
-    <Link href={`/scriptures/${sermonPath}`}>
+    <Link href={`/sermons/${sermonPath}`}>
       <Card
         className={`overflow-hidden group cursor-pointer transition-all duration-300 hover:translate-y-[-4px] hover:shadow-xl ${
           featured ? "ring-2 ring-[#efc64e]/50 shadow-lg shadow-[#efc64e]/20" : ""

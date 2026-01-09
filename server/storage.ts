@@ -6,7 +6,8 @@ import {
   type WorshipPrayer, type InsertWorshipPrayer,
   type Comment, type InsertComment,
   type Like, type InsertLike,
-  users, sermons, announcements, subscribers, worshipPrayer, comments, likes
+  type PageView, type InsertPageView,
+  users, sermons, announcements, subscribers, worshipPrayer, comments, likes, pageViews
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, lte, gt, or, isNull, sql } from "drizzle-orm";
@@ -73,6 +74,23 @@ export interface IStorage {
   deleteLike(sermonId: string, visitorId: string): Promise<boolean>;
   incrementSermonLikeCount(sermonId: string): Promise<void>;
   decrementSermonLikeCount(sermonId: string): Promise<void>;
+
+  // Analytics operations
+  createPageView(pageView: InsertPageView): Promise<PageView>;
+  getPageViewsByPath(path: string): Promise<PageView[]>;
+  getPageViewStats(startDate?: Date, endDate?: Date): Promise<{
+    totalViews: number;
+    uniqueVisitors: number;
+    topPages: { pagePath: string; pageType: string; views: number }[];
+    viewsByDay: { date: string; views: number }[];
+  }>;
+  getSermonAnalytics(): Promise<{
+    id: string;
+    title: string;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+  }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -376,7 +394,98 @@ export class DatabaseStorage implements IStorage {
       .set({ likeCount: sql`GREATEST(COALESCE(${sermons.likeCount}, 0) - 1, 0)` })
       .where(eq(sermons.id, sermonId));
   }
+
+  // Analytics operations
+  async createPageView(pageView: InsertPageView): Promise<PageView> {
+    const [view] = await db.insert(pageViews).values(pageView).returning();
+    return view;
+  }
+
+  async getPageViewsByPath(path: string): Promise<PageView[]> {
+    return await db.select().from(pageViews)
+      .where(eq(pageViews.pagePath, path))
+      .orderBy(desc(pageViews.viewedAt));
+  }
+
+  async getPageViewStats(startDate?: Date, endDate?: Date): Promise<{
+    totalViews: number;
+    uniqueVisitors: number;
+    topPages: { pagePath: string; pageType: string; views: number }[];
+    viewsByDay: { date: string; views: number }[];
+  }> {
+    // Get total views
+    const totalResult = await db.select({ count: sql<number>`count(*)` })
+      .from(pageViews);
+    const totalViews = Number(totalResult[0]?.count || 0);
+
+    // Get unique visitors
+    const uniqueResult = await db.select({ count: sql<number>`count(DISTINCT ${pageViews.visitorId})` })
+      .from(pageViews);
+    const uniqueVisitors = Number(uniqueResult[0]?.count || 0);
+
+    // Get top pages
+    const topPages = await db.select({
+      pagePath: pageViews.pagePath,
+      pageType: pageViews.pageType,
+      views: sql<number>`count(*)`
+    })
+      .from(pageViews)
+      .groupBy(pageViews.pagePath, pageViews.pageType)
+      .orderBy(desc(sql`count(*)`)
+      )
+      .limit(10);
+
+    // Get views by day (last 30 days)
+    const viewsByDay = await db.select({
+      date: sql<string>`DATE(${pageViews.viewedAt})`,
+      views: sql<number>`count(*)`
+    })
+      .from(pageViews)
+      .groupBy(sql`DATE(${pageViews.viewedAt})`)
+      .orderBy(desc(sql`DATE(${pageViews.viewedAt})`)
+      )
+      .limit(30);
+
+    return {
+      totalViews,
+      uniqueVisitors,
+      topPages: topPages.map(p => ({
+        pagePath: p.pagePath,
+        pageType: p.pageType,
+        views: Number(p.views)
+      })),
+      viewsByDay: viewsByDay.map(v => ({
+        date: String(v.date),
+        views: Number(v.views)
+      }))
+    };
+  }
+
+  async getSermonAnalytics(): Promise<{
+    id: string;
+    title: string;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+  }[]> {
+    const results = await db.select({
+      id: sermons.id,
+      title: sermons.title,
+      viewCount: sermons.viewCount,
+      likeCount: sermons.likeCount,
+      commentCount: sermons.commentCount
+    })
+      .from(sermons)
+      .orderBy(desc(sermons.viewCount));
+
+    return results.map(r => ({
+      id: r.id,
+      title: r.title,
+      viewCount: r.viewCount || 0,
+      likeCount: r.likeCount || 0,
+      commentCount: r.commentCount || 0
+    }));
+  }
 }
 
 export const storage = new DatabaseStorage();
-

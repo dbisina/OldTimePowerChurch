@@ -177,3 +177,23 @@ export const insertLikeSchema = createInsertSchema(likes).omit({
 export type InsertLike = z.infer<typeof insertLikeSchema>;
 export type Like = typeof likes.$inferSelect;
 
+// Page views table for detailed analytics
+export const pageViews = pgTable("page_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pagePath: text("page_path").notNull(), // e.g., /sermons/my-sermon-slug
+  pageType: text("page_type").notNull(), // sermon, announcement, home, about, etc.
+  resourceId: varchar("resource_id"), // sermon ID or announcement ID if applicable
+  visitorId: text("visitor_id"), // Cookie-based identifier
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  country: text("country"),
+  viewedAt: timestamp("viewed_at").defaultNow(),
+});
+
+export const insertPageViewSchema = createInsertSchema(pageViews).omit({
+  id: true,
+  viewedAt: true,
+});
+
+export type InsertPageView = z.infer<typeof insertPageViewSchema>;
+export type PageView = typeof pageViews.$inferSelect;

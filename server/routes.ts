@@ -928,5 +928,52 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== ANALYTICS ROUTES ====================
+
+  // Track page view (public endpoint)
+  app.post("/api/track/pageview", async (req: Request, res: Response) => {
+    try {
+      const { pagePath, pageType, resourceId, visitorId } = req.body;
+
+      if (!pagePath || !pageType) {
+        return res.status(400).json({ error: "pagePath and pageType are required" });
+      }
+
+      const pageView = await storage.createPageView({
+        pagePath,
+        pageType,
+        resourceId: resourceId || null,
+        visitorId: visitorId || null,
+        userAgent: req.headers['user-agent'] || null,
+        referrer: req.headers['referer'] || null,
+        country: null, // Could be added with IP geolocation
+      });
+
+      res.status(201).json({ success: true, id: pageView.id });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track page view" });
+    }
+  });
+
+  // Admin: Get analytics overview
+  app.get("/api/admin/analytics", async (req: Request, res: Response) => {
+    try {
+      const stats = await storage.getPageViewStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // Admin: Get sermon analytics
+  app.get("/api/admin/analytics/sermons", async (req: Request, res: Response) => {
+    try {
+      const analytics = await storage.getSermonAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sermon analytics" });
+    }
+  });
+
   return httpServer;
 }

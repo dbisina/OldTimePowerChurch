@@ -95,10 +95,10 @@ export default function SermonsPage() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-10">
           <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-[#b5621b] to-[#efc64e] bg-clip-text text-transparent">
-            Scripture Teachings
+            Spiritual Resources
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            Explore teachings, worship content, and scripture studies from our services.
+            Explore sermons, worship content, and scripture studies from our services.
           </p>
         </div>
 
@@ -126,7 +126,7 @@ export default function SermonsPage() {
               data-testid="tab-scriptures"
             >
               <ScrollText className="h-4 w-4" />
-              <span>Scriptures</span>
+              <span>Scripture Teachings</span>
             </TabsTrigger>
           </TabsList>
 
@@ -234,7 +234,7 @@ export default function SermonsPage() {
             {scriptureSermons.length > 0 ? (
               <div className="space-y-6">
                 {scriptureSermons.map((sermon) => (
-                  <Link key={sermon.id} href={`/scriptures/${sermon.slug || sermon.id}`}>
+                  <Link key={sermon.id} href={`/sermons/${sermon.slug || sermon.id}`}>
                     <Card 
                       className="bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all cursor-pointer hover:shadow-md"
                       data-testid={`card-scripture-${sermon.id}`}

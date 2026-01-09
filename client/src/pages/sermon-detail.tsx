@@ -234,10 +234,10 @@ export default function SermonDetailPage() {
           <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h1 className="text-2xl font-bold mb-2">Sermon not found</h1>
           <p className="text-muted-foreground mb-6">The sermon you're looking for doesn't exist or has been removed.</p>
-          <Link href="/scriptures">
+          <Link href="/sermons">
             <Button>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Browse All Teachings
+              Browse All Sermons
             </Button>
           </Link>
         </div>
@@ -281,14 +281,14 @@ export default function SermonDetailPage() {
       <div className="max-w-6xl mx-auto px-4">
         {/* Improved Back Button */}
         <div className="mb-8">
-          <Link href="/scriptures">
+          <Link href="/sermons">
             <Button 
               variant="outline" 
               className="group border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all"
               data-testid="button-back-to-sermons"
             >
               <ArrowLeft className="h-4 w-4 mr-2 transition-transform group-hover:-translate-x-1" />
-              Back to Teachings
+              Back to Sermons
             </Button>
           </Link>
         </div>
@@ -566,7 +566,7 @@ export default function SermonDetailPage() {
               <CardContent className="space-y-3">
                 {relatedSermons.length > 0 ? (
                   relatedSermons.map((relSermon) => (
-                    <Link key={relSermon.id} href={`/scriptures/${relSermon.slug || relSermon.id}`}>
+                    <Link key={relSermon.id} href={`/sermons/${relSermon.slug || relSermon.id}`}>
                       <div className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition-all cursor-pointer group border border-transparent hover:border-primary/20">
                         <div className="w-20 h-14 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                           <Play className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
@@ -587,9 +587,9 @@ export default function SermonDetailPage() {
                 
                 <Separator className="my-3" />
                 
-                <Link href="/scriptures">
+                <Link href="/sermons">
                   <Button variant="outline" className="w-full group">
-                    View All Teachings
+                    View All Sermons
                     <ArrowLeft className="h-4 w-4 ml-2 rotate-180 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
