@@ -514,6 +514,12 @@ export async function registerRoutes(
   app.put("/api/admin/sermons/:id", async (req: Request, res: Response) => {
     try {
       const body = { ...req.body };
+
+      // Convert date string to Date object if present
+      if (body.date) {
+        body.date = new Date(body.date);
+      }
+
       // Fetch YouTube thumbnail if videoUrl is present and thumbnailUrl is missing
       if (body.videoUrl && !body.thumbnailUrl) {
         try {
@@ -543,6 +549,7 @@ export async function registerRoutes(
       }
       res.json(sermon);
     } catch (error) {
+      console.error("Update sermon error:", error);
       res.status(500).json({ error: "Failed to update sermon" });
     }
   });

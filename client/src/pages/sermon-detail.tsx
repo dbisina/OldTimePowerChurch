@@ -590,78 +590,7 @@ export default function SermonDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Comments Section */}
-            <Card className="border-0 shadow-lg overflow-hidden">
-              <CardHeader className="pb-2">
-                <CardTitle className="font-serif text-xl flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-primary" />
-                  Comments ({comments.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                {/* Comment Form */}
-                <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-medium">Leave a comment</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      placeholder="Your name *"
-                      value={commentName}
-                      onChange={(e) => setCommentName(e.target.value)}
-                      className="px-3 py-2 rounded-md border bg-background text-sm"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email (optional)"
-                      value={commentEmail}
-                      onChange={(e) => setCommentEmail(e.target.value)}
-                      className="px-3 py-2 rounded-md border bg-background text-sm"
-                    />
-                  </div>
-                  <textarea
-                    placeholder="Write your comment..."
-                    value={commentContent}
-                    onChange={(e) => setCommentContent(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border bg-background text-sm min-h-[100px]"
-                  />
-                  <Button 
-                    onClick={submitComment}
-                    disabled={submittingComment || !commentName.trim() || !commentContent.trim()}
-                    className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {submittingComment ? "Submitting..." : "Submit Comment"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground">Comments are moderated and will appear after approval.</p>
-                </div>
 
-                {/* Comments List */}
-                {comments.length > 0 ? (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="p-4 bg-muted/20 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium text-sm">
-                            {comment.authorName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{comment.authorName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(comment.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground pl-10">{comment.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No comments yet. Be the first to share your thoughts!
-                  </p>
-                )}
-              </CardContent>
-            </Card>
 
             {/* Sermon Outline */}
             {/* Sermon Outline */}
@@ -786,6 +715,79 @@ export default function SermonDetailPage() {
               </Collapsible>
             </Card>
             )}
+
+            {/* Comments Section */}
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle className="font-serif text-xl flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                  Comments ({comments.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* Comment Form */}
+                <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+                  <h4 className="font-medium">Leave a comment</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Your name *"
+                      value={commentName}
+                      onChange={(e) => setCommentName(e.target.value)}
+                      className="px-3 py-2 rounded-md border bg-background text-sm"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email (optional)"
+                      value={commentEmail}
+                      onChange={(e) => setCommentEmail(e.target.value)}
+                      className="px-3 py-2 rounded-md border bg-background text-sm"
+                    />
+                  </div>
+                  <textarea
+                    placeholder="Write your comment..."
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md border bg-background text-sm min-h-[100px]"
+                  />
+                  <Button 
+                    onClick={submitComment}
+                    disabled={submittingComment || !commentName.trim() || !commentContent.trim()}
+                    className="bg-gradient-to-r from-[#b5621b] to-[#efc64e] text-white border-0"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {submittingComment ? "Submitting..." : "Submit Comment"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Comments are moderated and will appear after approval.</p>
+                </div>
+
+                {/* Comments List */}
+                {comments.length > 0 ? (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="p-4 bg-muted/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium text-sm">
+                            {comment.authorName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{comment.authorName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground pl-10">{comment.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No comments yet. Be the first to share your thoughts!
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
